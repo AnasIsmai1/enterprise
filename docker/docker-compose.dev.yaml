@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: postgres_local
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: flowchain_local
+    ports:
+      - 5432:5432
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: nestjs_backend
+    restart: unless-stopped
+    ports:
+      - ${PORT:-5500}:5500
+    depends_on:
+      - postgres
+    env_file:
+      - ../.env
+    environment:
+      DB_HOST: postgres_local 
+    volumes:
+      - ..:/app
+      - /app/node_modules
+volumes:
+  pgdata:
