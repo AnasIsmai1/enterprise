@@ -4,25 +4,25 @@ import { IRepository } from './interfaces/repository.interface';
 
 export class BaseRepository<T extends ObjectLiteral & { id: string }> extends Repository<T> implements IRepository<T> {
     async findById(id: string): Promise<T | null> {
-        return await this.findOne({ where: { id } as any });
+        return await super.findOne({ where: { id } as any });
     }
 
     async findAll(): Promise<T[]> {
-        return await this.find();
+        return await super.find();
     }
 
     async createEntity(entity: DeepPartial<T>): Promise<T> {
-        const newEntity = this.create(entity);
-        return await this.save(newEntity);
+        const newEntity = super.create(entity);
+        return await super.save(newEntity);
     }
 
     async updateEntity(id: string, entity: DeepPartial<T>): Promise<T | null> {
-        await this.update(id, entity);
+        await super.update(id, entity);
         return await this.findById(id);
     }
 
     async deleteEntity(id: string): Promise<void> {
-        await this.delete(id);
+        await super.delete(id);
     }
 
     async paginate(qb: SelectQueryBuilder<T>, options: PaginationOptions): Promise<PaginationResult<T>> {

@@ -27,6 +27,7 @@ infrastructure/cache
 infrastructure/providers
 infrastructure/repositories
 infrastructure/schemas
+infrastructure/factories
 presentation/controllers
 presentation/decorators
 presentation/filters

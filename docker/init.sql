@@ -1,1 +1,1 @@
-CREATE DATABASE IF NOT EXISTS flowchain_local;
+CREATE DATABASE flowchain_local;

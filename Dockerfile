@@ -4,14 +4,12 @@ WORKDIR /app
 
 COPY package*.json ./
 
-COPY docker/entrypoint.sh ./entrypoint.sh 
-
-RUN chmod +x ./entrypoint.sh
-
 RUN npm install
 
 COPY . .
 
+RUN npm run build
+
 EXPOSE 5500
 
-CMD ["npm", "run", "start:dev"]
+ENTRYPOINT ["npm", "run", "start:dev"]

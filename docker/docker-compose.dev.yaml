@@ -18,6 +18,18 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7
+    container_name: redis_local
+    restart: unless-stopped
+    ports:
+      - 6379:6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
     build:
       context: ..
@@ -28,10 +40,12 @@ services:
       - ${PORT:-5500}:5500
     depends_on:
       - postgres
+      - redis
     env_file:
       - ../.env
     environment:
-      DB_HOST: postgres_local 
+      DB_HOST: postgres 
+      REDIS_HOST: redis 
     volumes:
       - ..:/app
       - /app/node_modules

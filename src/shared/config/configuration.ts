@@ -1,5 +1,11 @@
 import { Environment } from "./env.validation";
 
+interface BrevoConfig {
+    api_key?: string;
+    email?: string;
+    email_name?: string;
+}
+
 interface DatabaseConfig {
     type?: string;
     host: string;
@@ -16,6 +22,16 @@ interface SwaggerConfig {
     route: string;
 }
 
+interface RedisConfig {
+    host: string,
+    port: number
+    password?: string;
+}
+
+interface AuthConfig {
+    session_secret: string;
+}
+
 interface AppConfig {
     port: number;
     env: string;
@@ -23,12 +39,18 @@ interface AppConfig {
 
 export default (): {
     app: AppConfig;
+    auth: AuthConfig;
     swagger: SwaggerConfig;
     database: DatabaseConfig;
+    redis: RedisConfig;
+    brevo: BrevoConfig;
 } => ({
     app: {
         port: parseInt(process.env.PORT ?? '3000', 10),
         env: process.env.NODE_ENV ?? Environment.Development,
+    },
+    auth: {
+        session_secret: process.env.SESSION_SECRET ?? 'default-sample-secret'
     },
     swagger: {
         title: 'Flowchain',
@@ -44,4 +66,14 @@ export default (): {
         password: process.env.DB_PASS ?? '',
         name: process.env.DB_NAME ?? 'postgres',
     },
+    redis: {
+        host: process.env.REDIS_HOST ?? 'localhost',
+        port: Number(process.env.REDIS_PORT),
+        password: process.env.REDIS_PASSWORD
+    },
+    brevo: {
+        api_key: process.env.BREVO_API_KEY,
+        email: process.env.BREVO_EMAIL,
+        email_name: process.env.BREVO_EMAIL_NAME,
+    }
 });

@@ -1,6 +1,7 @@
-import { IsEnum, IsNumber, IsString, Min, IsDefined } from 'class-validator';
+import { IsEnum, IsNumber, IsString, Min, IsDefined, MinLength, IsOptional } from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
+import { Logger } from '@nestjs/common';
 
 export enum Environment {
     Development = 'development',
@@ -8,6 +9,7 @@ export enum Environment {
 }
 
 export class AppConfigDto {
+    // App
     @IsDefined()
     @IsEnum(Environment)
     NODE_ENV: Environment;
@@ -17,6 +19,13 @@ export class AppConfigDto {
     @Min(0)
     PORT: number;
 
+    // Auth
+    @IsDefined()
+    @IsString()
+    @MinLength(5)
+    SESSION_SECRET: string;
+
+    // Database
     @IsDefined()
     @IsString()
     DB_HOST: string;
@@ -36,6 +45,36 @@ export class AppConfigDto {
     @IsDefined()
     @IsString()
     DB_NAME: string;
+
+    // Redis
+    @IsDefined()
+    @IsString()
+    REDIS_HOST: string;
+
+    @IsDefined()
+    @IsNumber()
+    @Min(0)
+    REDIS_PORT: number;
+
+    @IsOptional()
+    @IsString()
+    REDIS_PASSWORD: string;
+
+    // Email
+    @IsOptional()
+    @IsString()
+    @MinLength(1)
+    BREVO_API_KEY: string;
+
+    @IsOptional()
+    @IsString()
+    @MinLength(1)
+    BREVO_EMAIL: string;
+
+    @IsOptional()
+    @IsString()
+    @MinLength(1)
+    BREVO_EMAIL_NAME: string;
 }
 
 export default function validateConfig(config: Record<string, any>) {
@@ -47,6 +86,18 @@ export default function validateConfig(config: Record<string, any>) {
 
     if (errors.length > 0) {
         throw new Error(errors.toString());
+    }
+
+    // Warn if BREVO credentials are missing
+    if (
+        !validatedConfig.BREVO_API_KEY ||
+        !validatedConfig.BREVO_EMAIL ||
+        !validatedConfig.BREVO_EMAIL_NAME
+    ) {
+        Logger.warn(
+            'BREVO credentials are missing. Email service will not work without BREVO_API_KEY, BREVO_EMAIL, and BREVO_EMAIL_NAME.',
+            'ConfigValidation'
+        );
     }
 
     return validatedConfig;

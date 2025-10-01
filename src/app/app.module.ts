@@ -12,6 +12,9 @@ import { join } from 'path';
 import { RequestLoggerMiddleware } from '@/shared/middleware/logging/logging.middleware';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SharedModule } from '@/shared/shared.module';
+import { RedisModule } from '@/external/redis/redis.module';
+import { EmailModule } from '@/external/email/email.module';
+import { AuthModule } from '@/modules/auth/presentation/auth.module';
 
 @Module({
     imports: [
@@ -38,10 +41,14 @@ import { SharedModule } from '@/shared/shared.module';
                 password: configService.get<string>('database.password'),
                 database: configService.get<string>('database.name'),
 
-                // autoLoadEntities: true,
+                autoLoadEntities: true,
 
-                entities: ["**/modules/*/core/entities/*.entity{.ts,.js}"],
-                migrations: ["**/migrations/*{.ts,.js}"],
+                // entities: ["**/modules/*/core/entities/*.entity{.ts,.js}"],
+                // entities: [configService.get<string>('app.env') === Environment.Production
+                //     ? 'dist/modules/*/core/entities/*.entity.js'
+                //     : 'src/modules/*/core/entities/*.entity.ts'
+                // ],
+                // migrations: ["**/migrations/*{.ts,.js}"],
 
                 logging: ['error', 'warn', 'info', 'log', 'query'],
 
@@ -49,7 +56,10 @@ import { SharedModule } from '@/shared/shared.module';
                 ssl: configService.get<string>('app.env') === Environment.Production,
             })
         }),
+        EmailModule,
+        RedisModule,
         HealthModule,
+        AuthModule,
         SharedModule
     ],
     controllers: [AppController],
