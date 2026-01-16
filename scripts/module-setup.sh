@@ -5,7 +5,8 @@ MODULE=$(echo "$MODULE" | tr '[:upper:]' '[:lower:]')
 BASE="src/modules/$MODULE"
 
 if [ -z "$MODULE" ]; then
-  read -p "Enter module name: " MODULE
+  printf "Enter module name: "
+  read MODULE
   if [ -z "$MODULE" ]; then
     echo "Module name is required."
     exit 1

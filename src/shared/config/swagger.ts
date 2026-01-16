@@ -13,7 +13,7 @@ export const setupSwagger = (app: INestApplication, configService: ConfigService
     SwaggerModule.setup(configService.get<string>('swagger.route', ''), app, document, {
         customCss: '.swagger-ui .topbar { display: none }',
         customCssUrl: '/assets/swagger.css',
-        customSiteTitle: 'Flowchain Documentation',
+        customSiteTitle: 'Enterprise API Documentation',
         swaggerOptions: {
             persistAuthorization: true,
             displayRequestDuration: true,

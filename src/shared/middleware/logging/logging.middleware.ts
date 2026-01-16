@@ -238,7 +238,7 @@ export class RequestLoggerMiddleware implements NestMiddleware {
     private extractUserInfo(req: Request): any {
         try {
             if (req['user']) {
-                const user = req['user'];
+                const user = req['user'] as Record<string, any>;
                 return {
                     id: user.id || user.sub || 'unknown',
                     username: user.username || user.email || 'unknown',

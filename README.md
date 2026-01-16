@@ -1,98 +1,426 @@
-<p align="center"> 
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Enterprise API
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A production-ready NestJS backend boilerplate with JWT authentication, PostgreSQL, Redis, and Docker support.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## Tech Stack
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+| Category | Technology |
+|----------|------------|
+| Runtime | Node.js 20+ |
+| Framework | NestJS 11 |
+| Language | TypeScript 5.7 |
+| Database | PostgreSQL 16 |
+| ORM | TypeORM 0.3 |
+| Cache | Redis 7 |
+| Auth | JWT + Passport |
+| Authorization | CASL |
+| Validation | class-validator |
+| Documentation | Swagger/OpenAPI |
+| Containerization | Docker + Docker Compose |
 
-## Project setup
+---
 
-```bash
-$ npm install
-```
+## Quick Start
 
-## Compile and run the project
+### Prerequisites
 
-```bash
-# development
-$ npm run start
+- Node.js >= 18
+- Docker & Docker Compose
+- PostgreSQL 16 (or use Docker)
+- Redis 7 (or use Docker)
 
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
+### Option 1: Docker (Recommended)
 
 ```bash
-# unit tests
-$ npm run test
+# 1. Clone and navigate to project
+cd enterprise
 
-# e2e tests
-$ npm run test:e2e
+# 2. Copy environment file
+cp .env.example .env
 
-# test coverage
-$ npm run test:cov
+# 3. Start all services with hot reload
+npm run docker:watch:dev
+
+# 4. API is available at http://localhost:5500
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Option 2: Local Development
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+# 1. Install dependencies
+npm install
+
+# 2. Copy and configure environment
+cp .env.example .env
+# Edit .env with your database/redis connection details
+
+# 3. Run database migrations
+npm run db:migration:run
+
+# 4. Seed the database
+npm run db:seed
+
+# 5. Start development server
+npm run start:dev
+
+# API is available at http://localhost:5500
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+---
 
-## Resources
+## Project Structure
 
-Check out a few resources that may come in handy when working with NestJS:
+```
+enterprise/
+├── docker/                    # Docker configuration
+│   ├── Dockerfile            # Production multi-stage build
+│   ├── Dockerfile.dev        # Development with hot reload
+│   ├── docker-compose.yaml   # Production compose
+│   ├── docker-compose.dev.yaml # Development compose
+│   ├── entrypoint.sh         # Production startup script
+│   └── entrypoint.dev.sh     # Development startup script
+├── docs/                      # Documentation
+│   └── MIGRATIONS_AND_DOCKER.md
+├── scripts/                   # Utility scripts
+│   ├── setup.sh              # Initial project setup
+│   └── module-setup.sh       # Module scaffolding
+├── src/
+│   ├── app/                   # App module, health checks
+│   ├── external/              # External service integrations
+│   │   ├── email/            # Email service (Brevo)
+│   │   └── redis/            # Redis module
+│   ├── migrations/            # TypeORM migrations
+│   ├── modules/               # Feature modules
+│   │   ├── auth/             # Authentication (JWT)
+│   │   ├── organizations/    # Organization management
+│   │   └── user/             # User management, RBAC
+│   ├── seeds/                 # Database seeding
+│   └── shared/               # Shared utilities
+│       ├── config/           # Configuration & env validation
+│       ├── decorators/       # Custom decorators
+│       ├── filters/          # Exception filters
+│       └── interceptors/     # Response interceptors
+├── test/                      # E2E tests
+├── .env.example              # Environment template
+├── .eslintrc.js              # ESLint configuration
+└── .prettierrc               # Prettier configuration
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+---
 
-## Support
+## Available Scripts
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### Development
 
-## Stay in touch
+| Command | Description |
+|---------|-------------|
+| `npm run start:dev` | Start with hot reload |
+| `npm run start:debug` | Start with debugger |
+| `npm run lint` | Lint and fix code |
+| `npm run format` | Format code with Prettier |
+| `npm run test` | Run unit tests |
+| `npm run test:e2e` | Run E2E tests |
+| `npm run test:cov` | Run tests with coverage |
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+### Database
+
+| Command | Description |
+|---------|-------------|
+| `npm run db:migration:create -- MigrationName` | Create blank migration |
+| `npm run db:migration:generate -- MigrationName` | Generate migration from entities |
+| `npm run db:migration:run` | Run pending migrations |
+| `npm run db:migration:revert` | Revert last migration |
+| `npm run db:seed` | Seed database |
+
+### Docker - Development
+
+| Command | Description |
+|---------|-------------|
+| `npm run docker:watch:dev` | Start with hot reload (recommended) |
+| `npm run docker:up:dev` | Start services |
+| `npm run docker:down:dev` | Stop services |
+| `npm run docker:build:dev` | Rebuild containers |
+| `npm run docker:logs:dev` | View logs |
+| `npm run docker:clean:dev` | Stop and remove volumes |
+
+### Docker - Production
+
+| Command | Description |
+|---------|-------------|
+| `npm run docker:build:prod` | Build production image |
+| `npm run docker:up:prod` | Start in detached mode |
+| `npm run docker:down:prod` | Stop services |
+| `npm run docker:logs:prod` | View logs |
+| `npm run docker:restart:prod` | Restart services |
+
+---
+
+## Environment Variables
+
+Create a `.env` file from `.env.example`:
+
+```env
+# App
+NODE_ENV=development
+PORT=5500
+CLIENT_URL=http://localhost:3000
+
+# Database
+DB_TYPE=postgres
+DB_HOST=localhost          # Use 'postgres' in Docker
+DB_PORT=5432
+DB_USER=postgres
+DB_PASS=postgres
+DB_NAME=enterprise
+DB_SSL=false
+
+# Redis
+REDIS_HOST=localhost       # Use 'redis' in Docker
+REDIS_PORT=6379
+REDIS_PASSWORD=
+
+# Auth (JWT)
+JWT_SECRET=your-secret-key-change-in-production
+JWT_EXPIRATION=15m
+JWT_REFRESH_EXPIRATION=7d
+
+# Email (optional)
+BREVO_API_KEY=
+BREVO_EMAIL=
+BREVO_EMAIL_NAME=
+```
+
+---
+
+## API Endpoints
+
+### Health Check
+
+```
+GET /health              - Application health status
+```
+
+### Authentication
+
+```
+POST /auth/signin        - Login with credentials
+GET  /auth/me            - Get current user (requires auth)
+POST /auth/refresh       - Refresh access token
+POST /auth/logout        - Logout and revoke tokens
+```
+
+### Users
+
+```
+POST /users/signup       - Register new user
+POST /users/forgot-password    - Request password reset
+POST /users/reset-password     - Reset password with OTP
+POST /users/verify-email       - Verify email with OTP
+POST /users/resend-verification - Resend verification OTP
+```
+
+### Organizations
+
+```
+POST   /organizations    - Create organization
+GET    /organizations    - List user's organizations
+GET    /organizations/:id - Get organization details
+PUT    /organizations/:id - Update organization
+DELETE /organizations/:id - Delete organization
+POST   /organizations/:id/invite - Invite user
+```
+
+---
+
+## Authentication
+
+This project uses JWT-based authentication:
+
+- **Access Token**: Short-lived (15m), sent in Authorization header or httpOnly cookie
+- **Refresh Token**: Long-lived (7d), stored in Redis with JTI tracking
+- **Token Rotation**: New refresh token issued on each refresh, old one revoked
+
+### Making Authenticated Requests
+
+```bash
+# Login
+curl -X POST http://localhost:5500/auth/signin \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password123"}'
+
+# Use access token
+curl http://localhost:5500/auth/me \
+  -H "Authorization: Bearer <access_token>"
+
+# Or use cookies (automatically set on signin)
+curl http://localhost:5500/auth/me --cookie "access_token=<token>"
+```
+
+---
+
+## Database Migrations
+
+Migrations are tracked in the `enterprise_migrations` table.
+
+### Workflow
+
+```bash
+# 1. Make changes to entity files
+
+# 2. Build the project (required for CLI)
+npm run build
+
+# 3. Generate migration (just pass the name, path is automatic)
+npm run db:migration:generate -- AddNewColumn
+
+# 4. Review the generated file in src/migrations/
+
+# 5. Run migration
+npm run db:migration:run
+
+# 6. If needed, revert
+npm run db:migration:revert
+```
+
+See [docs/MIGRATIONS_AND_DOCKER.md](docs/MIGRATIONS_AND_DOCKER.md) for detailed documentation.
+
+---
+
+## Docker Architecture
+
+### Development
+- Hot reload via volume mounts
+- Source code synced to container
+- Services: app (5500), postgres (5432), redis (6379)
+
+### Production
+- Multi-stage build (~200MB image)
+- Non-root user (nestjs:1001)
+- dumb-init for signal handling
+- Health checks on all services
+- Auto-restart on failure
+
+See [docs/MIGRATIONS_AND_DOCKER.md](docs/MIGRATIONS_AND_DOCKER.md) for detailed documentation.
+
+---
+
+## CI/CD
+
+GitHub Actions workflow (`.github/workflows/main.yml`):
+
+1. **Test** - Runs on all pushes and PRs
+2. **Build** - Compiles TypeScript, uploads artifacts
+3. **Docker** - Builds and pushes to GHCR (main branch and tags only)
+
+---
+
+## Code Quality
+
+### Pre-push Hook
+
+Husky runs `npm run docker:build:dev` before each push to ensure the Docker build succeeds.
+
+### Linting & Formatting
+
+```bash
+# Lint with auto-fix
+npm run lint
+
+# Format code
+npm run format
+```
+
+---
+
+## Setup Scripts
+
+The `scripts/` directory contains utility scripts for project setup and scaffolding.
+
+### Initial Setup
+
+```bash
+npm run dev:setup
+```
+
+This script (`scripts/setup.sh`):
+1. Installs npm dependencies (if not already installed)
+2. Copies `.env.example` to `.env` (if not already present)
+3. Checks for Docker and Docker Compose installation
+4. Verifies Docker daemon is running
+5. Builds and starts the Docker Compose stack
+
+Options:
+```bash
+# Development setup (default)
+npm run dev:setup
+
+# Production setup
+npm run dev:setup prod
+```
+
+### Module Scaffolding
+
+```bash
+npm run module:setup <module-name>
+```
+
+This script (`scripts/module-setup.sh`) creates a new NestJS module with the Clean Architecture directory structure:
+
+```
+src/modules/<module-name>/
+├── application/
+│   ├── dtos/
+│   └── services/
+├── core/
+│   ├── entities/
+│   ├── exceptions/
+│   ├── value-objects/
+│   └── interfaces/
+│       ├── services/
+│       └── repositories/
+├── infrastructure/
+│   ├── cache/
+│   ├── providers/
+│   ├── repositories/
+│   ├── schemas/
+│   └── factories/
+└── presentation/
+    ├── controllers/
+    ├── decorators/
+    ├── filters/
+    ├── guards/
+    ├── interceptors/
+    ├── middlewares/
+    └── pipes/
+```
+
+It also generates:
+- Module file in `presentation/`
+- Controller in `presentation/controllers/`
+- Service in `application/services/`
+
+Example:
+```bash
+# Create a new "products" module
+npm run module:setup products
+```
+
+---
+
+## Path Aliases
+
+The project supports TypeScript path aliases for cleaner imports:
+
+| Alias | Path | Example |
+|-------|------|---------|
+| `@/*` | `src/*` | `import { User } from '@/modules/user/core/entities/user.entity'` |
+| `@mod/*` | `src/modules/*` | `import { User } from '@mod/user/core/entities/user.entity'` |
+| `@@/*` | Root directory | `import { something } from '@@/package.json'` |
+
+---
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+UNLICENSED - Private repository

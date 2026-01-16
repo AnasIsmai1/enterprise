@@ -1,1 +1,1 @@
-CREATE DATABASE flowchain_local;
+CREATE DATABASE enterprise;

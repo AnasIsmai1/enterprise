@@ -9,6 +9,18 @@ else
   npm install
 fi
 
+if [ -f ".env" ]; then
+  echo ".env file already exists. Skipping copy."
+else
+  if [ -f ".env.example" ]; then
+    echo "Copying .env.example to .env..."
+    cp .env.example .env
+    echo "Please review and update .env with your configuration."
+  else
+    echo "Warning: .env.example not found. Please create .env manually."
+  fi
+fi
+
 echo "Checking for Docker..."
 if ! command -v docker >/dev/null 2>&1; then
   echo "Docker is not installed. Please install Docker before continuing."

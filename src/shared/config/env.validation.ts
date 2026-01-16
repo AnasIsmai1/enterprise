@@ -1,80 +1,107 @@
-import { IsEnum, IsNumber, IsString, Min, IsDefined, MinLength, IsOptional } from 'class-validator';
+import {
+  IsEnum,
+  IsNumber,
+  IsString,
+  Min,
+  IsDefined,
+  MinLength,
+  IsOptional,
+} from 'class-validator';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import { Logger } from '@nestjs/common';
 
 export enum Environment {
-    Development = 'development',
-    Production = 'production',
+  Development = 'development',
+  Production = 'production',
+  Test = 'test',
 }
 
 export class AppConfigDto {
-    // App
-    @IsDefined()
-    @IsEnum(Environment)
-    NODE_ENV: Environment;
+  // App
+  @IsDefined()
+  @IsEnum(Environment)
+  NODE_ENV: Environment;
 
-    @IsDefined()
-    @IsNumber()
-    @Min(0)
-    PORT: number;
+  @IsDefined()
+  @IsNumber()
+  @Min(0)
+  PORT: number;
 
-    // Auth
-    @IsDefined()
-    @IsString()
-    @MinLength(5)
-    SESSION_SECRET: string;
+  @IsOptional()
+  @IsString()
+  CLIENT_URL: string;
 
-    // Database
-    @IsDefined()
-    @IsString()
-    DB_HOST: string;
+  // Auth (JWT)
+  @IsDefined()
+  @IsString()
+  @MinLength(5)
+  JWT_SECRET: string;
 
-    @IsDefined()
-    @IsNumber()
-    DB_PORT: number;
+  @IsDefined()
+  @IsString()
+  @MinLength(2)
+  JWT_EXPIRATION: string;
 
-    @IsDefined()
-    @IsString()
-    DB_USER: string;
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  JWT_REFRESH_EXPIRATION: string;
 
-    @IsDefined()
-    @IsString()
-    DB_PASS: string;
+  // Database
+  @IsDefined()
+  @IsString()
+  DB_HOST: string;
 
-    @IsDefined()
-    @IsString()
-    DB_NAME: string;
+  @IsDefined()
+  @IsNumber()
+  DB_PORT: number;
 
-    // Redis
-    @IsDefined()
-    @IsString()
-    REDIS_HOST: string;
+  @IsDefined()
+  @IsString()
+  DB_USER: string;
 
-    @IsDefined()
-    @IsNumber()
-    @Min(0)
-    REDIS_PORT: number;
+  @IsDefined()
+  @IsString()
+  DB_PASS: string;
 
-    @IsOptional()
-    @IsString()
-    REDIS_PASSWORD: string;
+  @IsDefined()
+  @IsString()
+  DB_NAME: string;
 
-    // Email
-    @IsOptional()
-    @IsString()
-    @MinLength(1)
-    BREVO_API_KEY: string;
+  @IsOptional()
+  @IsString()
+  DB_SSL: string;
 
-    @IsOptional()
-    @IsString()
-    @MinLength(1)
-    BREVO_EMAIL: string;
+  // Redis
+  @IsDefined()
+  @IsString()
+  REDIS_HOST: string;
 
-    @IsOptional()
-    @IsString()
-    @MinLength(1)
-    BREVO_EMAIL_NAME: string;
+  @IsDefined()
+  @IsNumber()
+  @Min(0)
+  REDIS_PORT: number;
+
+  @IsOptional()
+  @IsString()
+  REDIS_PASSWORD: string;
+
+  // Email
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  BREVO_API_KEY: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  BREVO_EMAIL: string;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  BREVO_EMAIL_NAME: string;
 }
 
 export default function validateConfig(config: Record<string, any>) {

@@ -1,53 +1,78 @@
 services:
+  app:
+    container_name: enterprise_app_dev
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+      target: dev
+    env_file:
+      - ../.env
+    environment:
+      - REDIS_HOST=redis
+      - DB_HOST=postgres
+      - DB_NAME=enterprise
+    ports:
+      - 5500:5500
+    volumes:
+      - ../src:/app/src
+      - ../test:/app/test
+      - ../package.json:/app/package.json
+      - /app/node_modules
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    develop:
+      watch:
+        - action: sync
+          path: ../src
+          target: /app/src
+        - action: rebuild
+          path: ../package.json
+        - action: rebuild
+          path: ../package-lock.json
+
   postgres:
     image: postgres:16
-    container_name: postgres_local
+    container_name: enterprise_postgres_dev
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: flowchain_local
+      POSTGRES_DB: enterprise
     ports:
       - 5432:5432
     volumes:
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-      - pgdata:/var/lib/postgresql/data
+      - pgdata_dev:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7
-    container_name: redis_local
+    container_name: enterprise_redis_dev
     restart: unless-stopped
     ports:
       - 6379:6379
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
+    command:
+      [
+        'redis-server',
+        '--maxmemory',
+        '256mb',
+        '--maxmemory-policy',
+        'allkeys-lru',
+      ]
 
-  backend:
-    build:
-      context: ..
-      dockerfile: Dockerfile
-    container_name: nestjs_backend
-    restart: unless-stopped
-    ports:
-      - ${PORT:-5500}:5500
-    depends_on:
-      - postgres
-      - redis
-    env_file:
-      - ../.env
-    environment:
-      DB_HOST: postgres 
-      REDIS_HOST: redis 
-    volumes:
-      - ..:/app
-      - /app/node_modules
 volumes:
-  pgdata:
+  pgdata_dev:
