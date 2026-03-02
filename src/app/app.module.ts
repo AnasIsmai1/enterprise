@@ -11,6 +11,7 @@ import { RequestLoggerMiddleware } from '@/shared/middleware/logging/logging.mid
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SharedModule } from '@/shared/shared.module';
 import { RedisModule } from '@/external/redis/redis.module';
+import { StorageModule } from '@/external/storage/storage.module';
 import { EmailModule } from '@/external/email/email.module';
 import { AuthModule } from '@/modules/auth/presentation/auth.module';
 
@@ -45,6 +46,7 @@ import { AuthModule } from '@/modules/auth/presentation/auth.module';
                 };
             },
         }),
+        StorageModule,
         EmailModule,
         RedisModule,
         HealthModule,
