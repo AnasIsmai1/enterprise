@@ -1,131 +1,104 @@
-import {
-  IsEnum,
-  IsNumber,
-  IsString,
-  Min,
-  IsDefined,
-  MinLength,
-  IsOptional,
-} from 'class-validator';
-import { plainToInstance } from 'class-transformer';
-import { validateSync } from 'class-validator';
-import { Logger } from '@nestjs/common';
+import { IsEnum, IsNumber, IsString, IsEmail, Min, validateSync } from 'class-validator';
+import { plainToInstance, Type } from 'class-transformer';
 
 export enum Environment {
-  Development = 'development',
-  Production = 'production',
-  Test = 'test',
+  DEVELOPMENT = 'development',
+  PRODUCTION = 'production',
+  TEST = 'test',
 }
 
 export class AppConfigDto {
-  // App
-  @IsDefined()
+  // App (3)
   @IsEnum(Environment)
   NODE_ENV: Environment;
 
-  @IsDefined()
+  @Type(() => Number)
   @IsNumber()
-  @Min(0)
+  @Min(1)
   PORT: number;
 
-  @IsOptional()
   @IsString()
   CLIENT_URL: string;
 
-  // Auth (JWT)
-  @IsDefined()
-  @IsString()
-  @MinLength(5)
-  JWT_SECRET: string;
-
-  @IsDefined()
-  @IsString()
-  @MinLength(2)
-  JWT_EXPIRATION: string;
-
-  @IsOptional()
-  @IsString()
-  @MinLength(2)
-  JWT_REFRESH_EXPIRATION: string;
-
-  // Database
-  @IsDefined()
+  // Database (5)
   @IsString()
   DB_HOST: string;
 
-  @IsDefined()
+  @Type(() => Number)
   @IsNumber()
   DB_PORT: number;
 
-  @IsDefined()
   @IsString()
   DB_USER: string;
 
-  @IsDefined()
   @IsString()
   DB_PASS: string;
 
-  @IsDefined()
   @IsString()
   DB_NAME: string;
 
-  @IsOptional()
-  @IsString()
-  DB_SSL: string;
-
-  // Redis
-  @IsDefined()
+  // Redis (2)
   @IsString()
   REDIS_HOST: string;
 
-  @IsDefined()
+  @Type(() => Number)
   @IsNumber()
-  @Min(0)
   REDIS_PORT: number;
 
-  @IsOptional()
+  // Cloudflare R2 - media/static (3)
   @IsString()
-  REDIS_PASSWORD: string;
+  R2_ENDPOINT: string;
 
-  // Email
-  @IsOptional()
   @IsString()
-  @MinLength(1)
+  R2_ACCESS_KEY: string;
+
+  @IsString()
+  R2_SECRET_KEY: string;
+
+  // Cloudflare R2 - capsule bucket (2)
+  @IsString()
+  R2_CAPSULE_ACCESS_KEY: string;
+
+  @IsString()
+  R2_CAPSULE_SECRET_KEY: string;
+
+  // Brevo (3)
+  @IsString()
   BREVO_API_KEY: string;
 
-  @IsOptional()
   @IsString()
-  @MinLength(1)
-  BREVO_EMAIL: string;
+  BREVO_SENDER_EMAIL: string;
 
-  @IsOptional()
   @IsString()
-  @MinLength(1)
-  BREVO_EMAIL_NAME: string;
+  BREVO_SENDER_NAME: string;
+
+  // Sentry (1)
+  @IsString()
+  SENTRY_DSN: string;
+
+  // Admin (1)
+  @IsEmail()
+  ADMIN_EMAIL: string;
+
+  // JWT (for Phase 2 auth)
+  @IsString()
+  JWT_SECRET: string;
 }
 
-export default function validateConfig(config: Record<string, any>) {
-    const validatedConfig = plainToInstance(AppConfigDto, config, {
-        enableImplicitConversion: true,
-    });
+export default function validate(config: Record<string, unknown>) {
+  const validatedConfig = plainToInstance(AppConfigDto, config, {
+    enableImplicitConversion: true,
+  });
+  const errors = validateSync(validatedConfig, {
+    skipMissingProperties: false,
+  });
 
-    const errors = validateSync(validatedConfig, { skipMissingProperties: false });
-
-    if (errors.length > 0) {
-        throw new Error(errors.toString());
-    }
-
-    // Warn if BREVO credentials are missing
-    if (
-        !validatedConfig.BREVO_API_KEY ||
-        !validatedConfig.BREVO_EMAIL ||
-        !validatedConfig.BREVO_EMAIL_NAME
-    ) {
-        Logger.warn(
-            'BREVO credentials are missing. Email service will not work without BREVO_API_KEY, BREVO_EMAIL, and BREVO_EMAIL_NAME.',
-            'ConfigValidation'
-        );
-    }
-
-    return validatedConfig;
+  if (errors.length > 0) {
+    throw new Error(
+      `Environment validation failed:\n${errors
+        .map((e) => Object.values(e.constraints ?? {}).join(', '))
+        .join('\n')}`,
+    );
+  }
+  return validatedConfig;
 }

@@ -1,89 +1,47 @@
-import { Environment } from './env.validation';
-
-interface BrevoConfig {
-  api_key?: string;
-  email?: string;
-  email_name?: string;
-}
-
-interface DatabaseConfig {
-  type?: string;
-  host: string;
-  port: number;
-  username: string;
-  password: string;
-  name: string;
-  ssl: string;
-}
-
-interface SwaggerConfig {
-  title: string;
-  description: string;
-  version: string | number;
-  route: string;
-}
-
-interface RedisConfig {
-  host: string;
-  port: number;
-  password?: string;
-}
-
-interface AuthConfig {
-  jwt_secret: string;
-  jwt_expiration: string;
-  jwt_refresh_expiration: string;
-}
-
-interface AppConfig {
-  client_url: string;
-  port: number;
-  env: string;
-}
-
-export default (): {
-  app: AppConfig;
-  auth: AuthConfig;
-  swagger: SwaggerConfig;
-  database: DatabaseConfig;
-  redis: RedisConfig;
-  brevo: BrevoConfig;
-} => ({
+export default () => ({
   app: {
-    client_url:
-      process.env.CLIENT_URL ?? 'http://localhost:3001, http://localhost:3000',
+    nodeEnv: process.env.NODE_ENV,
     port: parseInt(process.env.PORT ?? '5500', 10),
-    env: process.env.NODE_ENV ?? Environment.Development,
-  },
-  auth: {
-    jwt_secret:
-      process.env.JWT_SECRET ?? 'your-secret-key-change-in-production',
-    jwt_expiration: process.env.JWT_EXPIRATION ?? '15m',
-    jwt_refresh_expiration: process.env.JWT_REFRESH_EXPIRATION ?? '7d',
-  },
-  swagger: {
-    title: 'Enterprise API',
-    description: 'Enterprise API Documentation',
-    version: 1,
-    route: 'api/docs',
+    clientUrl: process.env.CLIENT_URL,
   },
   database: {
-    type: 'postgres',
-    host: process.env.DB_HOST ?? 'localhost',
+    host: process.env.DB_HOST,
     port: parseInt(process.env.DB_PORT ?? '5432', 10),
-    username: process.env.DB_USER ?? 'postgres',
-    password: process.env.DB_PASS ?? '',
-    name: process.env.DB_NAME ?? 'postgres',
-    ssl: process.env.DB_SSL ?? 'false',
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    name: process.env.DB_NAME,
   },
   redis: {
-    host: process.env.REDIS_HOST ?? 'localhost',
-    port: Number(process.env.REDIS_PORT),
-    password: process.env.REDIS_PASSWORD,
+    host: process.env.REDIS_HOST,
+    port: parseInt(process.env.REDIS_PORT ?? '6379', 10),
   },
-  brevo: {
-    api_key: process.env.BREVO_API_KEY,
-    email: process.env.BREVO_EMAIL,
-    email_name: process.env.BREVO_EMAIL_NAME,
+  storage: {
+    r2Endpoint: process.env.R2_ENDPOINT,
+    r2AccessKey: process.env.R2_ACCESS_KEY,
+    r2SecretKey: process.env.R2_SECRET_KEY,
+    r2CapsuleAccessKey: process.env.R2_CAPSULE_ACCESS_KEY,
+    r2CapsuleSecretKey: process.env.R2_CAPSULE_SECRET_KEY,
+  },
+  email: {
+    brevoApiKey: process.env.BREVO_API_KEY,
+    senderEmail: process.env.BREVO_SENDER_EMAIL,
+    senderName: process.env.BREVO_SENDER_NAME,
+  },
+  sentry: {
+    dsn: process.env.SENTRY_DSN,
+  },
+  admin: {
+    email: process.env.ADMIN_EMAIL,
+  },
+  jwt: {
+    secret: process.env.JWT_SECRET,
+    expiration: process.env.JWT_EXPIRATION ?? '15m',
+    refreshExpiration: process.env.JWT_REFRESH_EXPIRATION ?? '7d',
+  },
+  swagger: {
+    title: 'PoshPet API',
+    description: 'PoshPet API Documentation',
+    version: 1,
+    route: 'api/docs',
   },
 });

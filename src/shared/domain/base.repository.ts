@@ -2,6 +2,11 @@ import { ObjectLiteral, Repository, SelectQueryBuilder, DeepPartial } from 'type
 import { PaginationOptions, PaginationResult } from './interfaces/pagination.interface';
 import { IRepository } from './interfaces/repository.interface';
 
+const MAX_LIMIT = 100;
+const DEFAULT_LIMIT = 10;
+const DEFAULT_SORT = 'created_at';
+const DEFAULT_ORDER = 'DESC';
+
 export class BaseRepository<T extends ObjectLiteral & { id: string }> extends Repository<T> implements IRepository<T> {
     async findById(id: string): Promise<T | null> {
         return await super.findOne({ where: { id } as any });
@@ -26,11 +31,31 @@ export class BaseRepository<T extends ObjectLiteral & { id: string }> extends Re
     }
 
     async paginate(qb: SelectQueryBuilder<T>, options: PaginationOptions): Promise<PaginationResult<T>> {
-        const { page = 1, limit = 10 } = options;
+        const page = options.page ?? 1;
+        // Enforce max limit of 100 (API-07)
+        const limit = Math.min(options.limit ?? DEFAULT_LIMIT, MAX_LIMIT);
+        const sort = options.sort ?? DEFAULT_SORT;
+        const order = options.order ?? DEFAULT_ORDER;
+
+        const alias = qb.alias;
+        const sortColumn = `${alias}.${sort}`;
+
         const [items, total] = await qb
+            .orderBy(sortColumn, order)
             .skip((page - 1) * limit)
             .take(limit)
             .getManyAndCount();
-        return { items, total, page, limit };
+
+        const total_pages = Math.ceil(total / limit);
+        const has_more = page * limit < total;
+
+        return {
+            items,
+            total,
+            page,
+            limit,
+            has_more,
+            total_pages,
+        };
     }
 }

@@ -1,6 +1,9 @@
+# PoshPet development Docker Compose
+# NOTE: Production databases must NOT be publicly accessible.
+# In production, remove port bindings entirely and use internal Docker networking.
 services:
   app:
-    container_name: enterprise_app_dev
+    container_name: poshpet_app_dev
     build:
       context: ..
       dockerfile: docker/Dockerfile.dev
@@ -10,7 +13,7 @@ services:
     environment:
       - REDIS_HOST=redis
       - DB_HOST=postgres
-      - DB_NAME=enterprise
+      - DB_NAME=poshpet
     ports:
       - 5500:5500
     volumes:
@@ -38,16 +41,18 @@ services:
 
   postgres:
     image: postgres:16
-    container_name: enterprise_postgres_dev
+    container_name: poshpet_postgres_dev
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: enterprise
+      POSTGRES_DB: poshpet
     ports:
-      - 5432:5432
+      # Bound to localhost only for local development (SEC-13)
+      # Remove this port binding entirely in production
+      - 127.0.0.1:5432:5432
     volumes:
-      - pgdata_dev:/var/lib/postgresql/data
+      - poshpet_pgdata_dev:/var/lib/postgresql/data
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
@@ -56,10 +61,10 @@ services:
 
   redis:
     image: redis:7
-    container_name: enterprise_redis_dev
+    container_name: poshpet_redis_dev
     restart: unless-stopped
     ports:
-      - 6379:6379
+      - 127.0.0.1:6379:6379
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 10s
@@ -75,4 +80,4 @@ services:
       ]
 
 volumes:
-  pgdata_dev:
+  poshpet_pgdata_dev:

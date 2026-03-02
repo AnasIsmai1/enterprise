@@ -26,7 +26,7 @@ export class AuthService {
     role: string
   ): Promise<{ access_token: string; expires_in: string }> {
     const expiresIn =
-      this.configService.get<string>('auth.jwt_expiration') || '15m';
+      this.configService.get<string>('jwt.expiration') || '15m';
     const payload = {
       sub: userId,
       email,
@@ -46,7 +46,7 @@ export class AuthService {
     userId: string
   ): Promise<{ refresh_token: string; expires_in: string }> {
     const expiresIn =
-      this.configService.get<string>('auth.jwt_refresh_expiration') || '7d';
+      this.configService.get<string>('jwt.refreshExpiration') || '7d';
     const jti = uuid();
 
     const payload = {

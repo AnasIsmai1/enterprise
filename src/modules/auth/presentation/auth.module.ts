@@ -16,9 +16,9 @@ import { UserModule } from '@/modules/user/presentation/user.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (configService: ConfigService): JwtModuleOptions => {
-        const expiresIn = configService.get<string>('auth.jwt_expiration') ?? '15m';
+        const expiresIn = configService.get<string>('jwt.expiration') ?? '15m';
         return {
-          secret: configService.get<string>('auth.jwt_secret'),
+          secret: configService.get<string>('jwt.secret'),
           signOptions: {
             expiresIn: expiresIn as any,
           },
