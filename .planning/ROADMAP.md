@@ -32,12 +32,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. A test API request demonstrates the full request/response lifecycle: validation (class-validator), standardized success/error response format, pagination meta, rate limiting headers, and Swagger documentation
   4. File upload to Cloudflare R2 works for all 3 buckets (media, capsules, static) with signed URL generation and correct directory structure
   5. Brevo transactional email sends successfully for verification, password reset, and alert templates, with Sentry capturing 5xx errors and sending admin alert emails on critical failures
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 01-01: Boilerplate cleanup and database foundation
-- [ ] 01-02: API conventions, security middleware, and error handling
-- [ ] 01-03: File storage (R2) and email service (Brevo)
+- [x] 01-01: Boilerplate cleanup and database foundation
+- [x] 01-02: API conventions, security middleware, and error handling
+- [x] 01-03: File storage (R2) and email service (Brevo)
 
 ### Phase 2: Identity & Payments
 **Goal**: Users can register, authenticate, manage their accounts, create and manage pets, and subscribe to premium -- the complete identity and payment foundation that all features depend on
@@ -49,12 +49,14 @@ Plans:
   3. A user can initiate Stripe Checkout to subscribe (monthly or annual), manage their subscription via Stripe Customer Portal, and the system correctly processes all 6 webhook events (created, updated, deleted, payment failed/succeeded, checkout completed) to update subscription status
   4. On premium downgrade, second+ pets become view-only, premium features are locked, but all user data is preserved
   5. Account deletion with "type DELETE" confirmation initiates a 14-day grace period, and the @RequiresPremium() decorator correctly gates premium-only endpoints while @Roles() guards enforce role-based access
-**Plans**: TBD
+**Plans**: 5 plans
 
 Plans:
-- [ ] 02-01: Better-Auth integration and authentication flows
-- [ ] 02-02: User accounts, pet CRUD, and role guards
-- [ ] 02-03: Stripe subscriptions and webhook handling
+- [ ] 02-01-PLAN.md — Better-Auth integration, social login, JWT tokens, login rate limiting
+- [ ] 02-02-PLAN.md — User entity extensions, profile management, account deletion grace period
+- [ ] 02-03-PLAN.md — Pet CRUD module with 14 species, soft-delete, free-tier limit
+- [ ] 02-04-PLAN.md — Stripe subscriptions, checkout, portal, 6 webhook handlers
+- [ ] 02-05-PLAN.md — Premium guards, view-only pet enforcement, downgrade logic
 
 ### Phase 3: Daily Care Engine
 **Goal**: The core daily loop works end-to-end: task templates generate daily instances, completing tasks updates the Care Garden, maintains streaks, awards badges, and recalculates the pet's avatar mood
@@ -144,7 +146,7 @@ Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation & Infrastructure | 3/3 | Complete   | 2026-03-02 |
-| 2. Identity & Payments | 0/3 | Not started | - |
+| 2. Identity & Payments | 0/5 | Not started | - |
 | 3. Daily Care Engine | 0/2 | Not started | - |
 | 4. Pet Data & Media | 0/3 | Not started | - |
 | 5. Social & Notifications | 0/2 | Not started | - |
