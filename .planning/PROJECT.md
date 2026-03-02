@@ -73,7 +73,7 @@ All clients communicate via RESTful HTTPS endpoints. No direct database access f
 - **Tech Stack**: Node.js 20 LTS + NestJS + TypeScript + TypeORM — non-negotiable
 - **Database**: PostgreSQL 15+ with UUID primary keys, TIMESTAMP WITH TIME ZONE for all dates
 - **Cache**: Redis for JWT refresh tokens, garden state, streak data, avatar mood (various TTLs)
-- **Auth**: Better-Auth or Clerk — to be decided during research phase
+- **Auth**: Better-Auth (self-hosted) with @thallesp/nestjs-better-auth + @hedystia/better-auth-typeorm adapters. Simple @Roles() guards, no CASL
 - **Payments**: Stripe with webhooks (customer.subscription.created/updated/deleted, invoice.payment_failed/succeeded)
 - **File Storage**: Cloudflare R2 or AWS S3 compatible — signed URLs, 3 buckets (media, capsules, static)
 - **Local Dev**: Docker Compose for PostgreSQL, Redis, and any other services
@@ -85,11 +85,15 @@ All clients communicate via RESTful HTTPS endpoints. No direct database access f
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| NestJS over Express | Modular architecture with DI handles 35-table, 8-domain project better than flat Express routes | — Pending |
-| TypeORM over Drizzle/Prisma | First-class NestJS integration, repository pattern, decorator-based entities match NestJS conventions | — Pending |
-| Docker Compose for local dev | Vendor-agnostic, portable, avoids cloud lock-in during development | — Pending |
-| Better-Auth vs Clerk | Auth provider TBD — research phase will compare for premium subscription app needs | — Pending |
-| Backend-only scope | Frontend is a separate project; backend provides complete API surface for all three clients | — Pending |
+| NestJS over Express | Modular architecture with DI handles 35-table, 8-domain project better than flat Express routes | Confirmed |
+| TypeORM over Drizzle/Prisma | First-class NestJS integration, repository pattern, decorator-based entities match NestJS conventions | Confirmed |
+| Docker Compose for local dev | Vendor-agnostic, portable, avoids cloud lock-in during development | Confirmed |
+| Better-Auth over Clerk/DIY | Self-hosted, NestJS adapter exists (@thallesp/nestjs-better-auth), TypeORM adapter exists (@hedystia/better-auth-typeorm), built-in Apple/Google social login with mobile ID token support, simple @Roles() decorator replaces CASL, $0 forever, all data in own DB | Confirmed |
+| Drop CASL RBAC | CASL is enterprise overkill for PoshPet's simple free/premium/admin model. Better-Auth's @Roles() + custom PremiumGuard is simpler and faster | Confirmed |
+| Brevo for transactional email | Already partially wired in boilerplate, proven deliverability, 300 emails/day free tier. Better-Auth email hooks are provider-agnostic — Brevo plugs in via sendVerificationEmail/sendResetPassword callbacks | Confirmed |
+| Backend-only scope | Frontend is a separate project; backend provides complete API surface for all three clients | Confirmed |
+| @nestjs/terminus for health checks | Official NestJS health check module with readiness/liveness probes for Postgres, Redis, disk, memory. Integrates cleanly with NestJS DI | Confirmed |
+| Global exception filters for error handling | NestJS global filters (AllExceptionsFilter, HttpExceptionFilter) catch all unhandled errors and return standardized error response format. Replaces per-controller try/catch | Confirmed |
 
 ---
-*Last updated: 2026-03-02 after initialization*
+*Last updated: 2026-03-02 — added Terminus health checks and global filters decisions*
