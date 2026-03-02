@@ -1,0 +1,23 @@
+export enum ErrorCode {
+  VALIDATION_ERROR = 'VALIDATION_ERROR',       // 400
+  UNAUTHORIZED = 'UNAUTHORIZED',               // 401
+  FORBIDDEN = 'FORBIDDEN',                     // 403
+  NOT_FOUND = 'NOT_FOUND',                     // 404
+  CONFLICT = 'CONFLICT',                       // 409
+  RATE_LIMITED = 'RATE_LIMITED',               // 429
+  UNPROCESSABLE = 'UNPROCESSABLE',             // 422
+  INTERNAL_ERROR = 'INTERNAL_ERROR',           // 500
+  SERVICE_UNAVAILABLE = 'SERVICE_UNAVAILABLE', // 503
+}
+
+export const HTTP_STATUS_TO_ERROR_CODE: Record<number, ErrorCode> = {
+  400: ErrorCode.VALIDATION_ERROR,
+  401: ErrorCode.UNAUTHORIZED,
+  403: ErrorCode.FORBIDDEN,
+  404: ErrorCode.NOT_FOUND,
+  409: ErrorCode.CONFLICT,
+  422: ErrorCode.UNPROCESSABLE,
+  429: ErrorCode.RATE_LIMITED,
+  500: ErrorCode.INTERNAL_ERROR,
+  503: ErrorCode.SERVICE_UNAVAILABLE,
+};

@@ -1,10 +1,28 @@
+import * as Sentry from '@sentry/nestjs';
+
+// SEC-01: TLS 1.3 is enforced at the Cloudflare reverse proxy layer.
+// The NestJS app runs behind Cloudflare and does not terminate TLS directly.
+// Ensure Cloudflare SSL/TLS settings are set to "Full (strict)" with minimum TLS 1.3.
+
+// INFRA-06, SEC-06: Initialize Sentry BEFORE NestFactory.create()
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || 'development',
+    // Only 5xx errors are captured — 4xx filtering happens in AllExceptionsFilter
+  });
+}
+
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app/app.module';
 import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
 import helmet from 'helmet';
 import { ConfigService } from '@nestjs/config';
 import { setupSwagger } from './shared/config/swagger';
-import { ResponseInterceptor } from './shared/interceptors/response/response.interceptor';
+import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
@@ -36,7 +54,20 @@ async function bootstrap() {
     type: VersioningType.URI,
   });
 
-  app.useGlobalInterceptors(new ResponseInterceptor());
+  // Global exception filters (API-05, SEC-06, SEC-07, SEC-08)
+  // CRITICAL order: AllExceptionsFilter FIRST, HttpExceptionFilter SECOND.
+  // NestJS applies filters in reverse registration order, so HttpExceptionFilter
+  // executes first (catches HttpExceptions), AllExceptionsFilter catches everything else.
+  // Note: AllExceptionsFilter and HttpExceptionFilter are also registered via APP_FILTER
+  // in AppModule for DI (ConfigService injection). The useGlobalFilters here is for
+  // cases where DI-based filters need manual instantiation. Using APP_FILTER approach
+  // in app.module.ts is the primary registration; these lines can be removed if DI works.
+  //
+  // Since we use APP_FILTER in app.module.ts (which supports DI), we don't need
+  // useGlobalFilters here — but we keep LoggingInterceptor and ResponseInterceptor.
+
+  // Global interceptors — LoggingInterceptor wraps outer, ResponseInterceptor wraps inner
+  app.useGlobalInterceptors(new LoggingInterceptor(), new ResponseInterceptor());
 
   // Global validation pipe (API-14, API-16)
   app.useGlobalPipes(
@@ -44,7 +75,7 @@ async function bootstrap() {
       transform: true,
       whitelist: true,
       forbidNonWhitelisted: true,
-    })
+    }),
   );
 
   app.enableShutdownHooks();
