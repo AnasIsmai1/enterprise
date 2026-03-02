@@ -9,6 +9,7 @@ import validate from '@/shared/config/env.validation';
 import { ResponseInterceptor } from '@/shared/interceptors/response/response.interceptor';
 import { RequestLoggerMiddleware } from '@/shared/middleware/logging/logging.middleware';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { BullModule } from '@nestjs/bullmq';
 import { SharedModule } from '@/shared/shared.module';
 import { RedisModule } from '@/external/redis/redis.module';
 import { StorageModule } from '@/external/storage/storage.module';
@@ -45,6 +46,16 @@ import { AuthModule } from '@/modules/auth/presentation/auth.module';
                     synchronize: false,
                 };
             },
+        }),
+        BullModule.forRootAsync({
+            imports: [ConfigModule],
+            inject: [ConfigService],
+            useFactory: (config: ConfigService) => ({
+                connection: {
+                    host: config.get('redis.host'),
+                    port: config.get('redis.port'),
+                },
+            }),
         }),
         StorageModule,
         EmailModule,

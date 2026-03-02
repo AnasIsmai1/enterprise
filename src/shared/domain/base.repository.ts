@@ -2,6 +2,24 @@ import { ObjectLiteral, Repository, SelectQueryBuilder, DeepPartial } from 'type
 import { PaginationOptions, PaginationResult } from './interfaces/pagination.interface';
 import { IRepository } from './interfaces/repository.interface';
 
+/**
+ * Optimistic locking pattern (SEC-11):
+ * When updating a resource that may have concurrent modifications, include
+ * `updated_at` in the WHERE clause to detect conflicts:
+ *
+ * const result = await repo.update(
+ *   { id, updated_at: expectedUpdatedAt },
+ *   updateData,
+ * );
+ * if (result.affected === 0) {
+ *   throw new ConflictException('Resource was modified by another request');
+ * }
+ *
+ * This prevents concurrent modifications from silently overwriting each other.
+ * Apply this pattern in service methods for any resource that can be concurrently modified
+ * (e.g., pet profiles, circles, capsules, memory pages).
+ */
+
 const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 10;
 const DEFAULT_SORT = 'created_at';
