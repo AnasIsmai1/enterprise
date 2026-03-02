@@ -653,17 +653,17 @@
 | API-14 | Phase 1 | Pending |
 | SEC-01 | Phase 1 | Pending |
 | SEC-02 | Phase 1 | Pending |
-| SEC-03 | Phase 1 | Pending |
+| SEC-03 | Phase 1 | Complete |
 | SEC-04 | Phase 1 | Pending |
-| SEC-05 | Phase 1 | Pending |
+| SEC-05 | Phase 1 | Complete |
 | SEC-06 | Phase 1 | Pending |
 | SEC-07 | Phase 1 | Pending |
 | SEC-08 | Phase 1 | Pending |
 | SEC-09 | Phase 1 | Pending |
 | SEC-10 | Phase 1 | Pending |
 | SEC-11 | Phase 1 | Pending |
-| SEC-12 | Phase 1 | Pending |
-| SEC-13 | Phase 1 | Pending |
+| SEC-12 | Phase 1 | Complete |
+| SEC-13 | Phase 1 | Complete |
 | SEC-14 | Phase 1 | Pending |
 | EMAIL-01 | Phase 1 | Pending |
 | EMAIL-02 | Phase 1 | Pending |
@@ -671,14 +671,14 @@
 | EMAIL-04 | Phase 1 | Pending |
 | EMAIL-05 | Phase 1 | Pending |
 | EMAIL-06 | Phase 1 | Pending |
-| INFRA-01 | Phase 1 | Pending |
-| INFRA-02 | Phase 1 | Pending |
+| INFRA-01 | Phase 1 | Complete |
+| INFRA-02 | Phase 1 | Complete |
 | INFRA-03 | Phase 1 | Pending |
 | INFRA-04 | Phase 1 | Pending |
-| INFRA-05 | Phase 1 | Pending |
+| INFRA-05 | Phase 1 | Complete |
 | INFRA-06 | Phase 1 | Pending |
-| INFRA-07 | Phase 1 | Pending |
-| INFRA-08 | Phase 1 | Pending |
-| INFRA-09 | Phase 1 | Pending |
+| INFRA-07 | Phase 1 | Complete |
+| INFRA-08 | Phase 1 | Complete |
+| INFRA-09 | Phase 1 | Complete |
 
 **Coverage:** 236/236 requirements mapped. No orphans.
