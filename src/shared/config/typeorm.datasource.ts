@@ -3,6 +3,7 @@ import { DataSource } from 'typeorm';
 // Use relative imports for TypeORM CLI compatibility
 import { Users } from '../../modules/user/core/entities/user.entity';
 import { UserOtp } from '../../modules/user/core/entities/user_otp.entity';
+import { AuditLog } from '../../modules/audit/audit.entity';
 
 const typeormDataSource = new DataSource({
   type: 'postgres',
@@ -11,7 +12,7 @@ const typeormDataSource = new DataSource({
   username: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASS || '',
   database: process.env.DB_NAME || 'poshpet',
-  entities: [Users, UserOtp],
+  entities: [Users, UserOtp, AuditLog],
   migrations: [__dirname + '/../../migrations/*{.ts,.js}'],
   migrationsTableName: 'poshpet_migrations',
   synchronize: false,

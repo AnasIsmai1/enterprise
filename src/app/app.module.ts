@@ -17,7 +17,7 @@ import { StorageModule } from '@/external/storage/storage.module';
 import { EmailModule } from '@/external/email/email.module';
 import { AuthModule } from '@/modules/auth/presentation/auth.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
-// AuditModule imported after Task 2 creates it
+import { AuditModule } from '@/modules/audit/audit.module';
 import { AllExceptionsFilter } from '@/common/filters/all-exceptions.filter';
 import { HttpExceptionFilter } from '@/common/filters/http-exception.filter';
 
@@ -85,7 +85,7 @@ import { HttpExceptionFilter } from '@/common/filters/http-exception.filter';
         EmailModule,
         RedisModule,
         HealthModule,
-        // AuditModule — added in Task 2
+        AuditModule,
         AuthModule,
         SharedModule,
     ],
