@@ -1,0 +1,36 @@
+# =============================================================================
+# DEVELOPMENT DOCKERFILE - Multi-stage build with hot reload
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Stage 1: deps - Install all dependencies (including devDependencies)
+# -----------------------------------------------------------------------------
+FROM node:20-alpine AS deps
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm ci
+
+# -----------------------------------------------------------------------------
+# Stage 2: dev - Development server with hot reload
+# -----------------------------------------------------------------------------
+FROM deps AS dev
+
+LABEL org.opencontainers.image.source=https://github.com/EagleAnalytix/enterprise
+LABEL org.opencontainers.image.description="Enterprise API - Development"
+LABEL org.opencontainers.image.licenses=MIT
+
+WORKDIR /app
+
+ENV NODE_ENV=development
+
+COPY . .
+
+COPY docker/entrypoint.dev.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+EXPOSE 5500
+
+CMD ["/app/entrypoint.sh"]
