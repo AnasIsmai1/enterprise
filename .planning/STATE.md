@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-02T10:48:50.453Z"
+last_updated: "2026-03-02T10:56:30.709Z"
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
 ---
 
 # Project State
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-03-02)
 ## Current Position
 
 Phase: 1 of 7 (Foundation & Infrastructure)
-Plan: 1 of 3 in current phase
+Plan: 3 of 3 in current phase
 Status: In progress
-Last activity: 2026-03-02 -- Completed Plan 01 (foundation cleanup, BaseEntity fix, env validation)
+Last activity: 2026-03-02 -- Completed Plan 03 (StorageService R2, EmailService BullMQ/Brevo, optimistic locking)
 
 Progress: [#░░░░░░░░░] 5%
 
@@ -48,6 +48,7 @@ Progress: [#░░░░░░░░░] 5%
 
 *Updated after each plan completion*
 | Phase 01-foundation-infrastructure P01 | 10 | 2 tasks | 35 files |
+| Phase 01-foundation-infrastructure P03 | 3 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,9 @@ Recent decisions affecting current work:
 - [Phase 01-foundation-infrastructure]: UserRole as enum column (free/premium/superadmin) replaces DB-backed RBAC table
 - [Phase 01-foundation-infrastructure]: synchronize unconditionally false in all TypeORM configs
 - [Phase 01-foundation-infrastructure]: Config keys restructured to jwt.secret, database.user, email.brevoApiKey namespacing
+- [Phase 01-foundation-infrastructure]: Dual S3Client: separate mediaClient (MEDIA+STATIC) and capsuleClient (CAPSULE) with distinct IAM credentials per FILE-04
+- [Phase 01-foundation-infrastructure]: EmailService.send() is fire-and-forget BullMQ enqueue - zero synchronous Brevo calls in hot path; EmailProcessor handles all Brevo API calls with 3-retry exponential backoff
+- [Phase 01-foundation-infrastructure]: Signed URLs cached at 50-minute TTL (3000s) vs 1-hour expiry (3600s) to prevent serving expired URLs from cache
 
 ### Pending Todos
 
@@ -79,5 +83,5 @@ None. Base.entity.ts is fixed, CASL/org entities are removed.
 ## Session Continuity
 
 Last session: 2026-03-02
-Stopped at: Completed 01-01-PLAN.md (foundation cleanup, BaseEntity fix, env validation, Docker rename, pagination)
+Stopped at: Completed 01-03-PLAN.md (StorageService R2, EmailService BullMQ/Brevo, optimistic locking convention)
 Resume file: None
