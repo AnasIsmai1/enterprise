@@ -1,7 +1,6 @@
 import { BaseEntity } from "@/shared/domain/base.entity";
 import { Exclude } from "class-transformer";
 import { Column, Entity, OneToMany } from "typeorm";
-import { UserRoles } from "./user_role.entity";
 import { UserOtp } from "./user_otp.entity";
 
 export enum UserStatus {
@@ -11,6 +10,12 @@ export enum UserStatus {
     SUSPENDED = 'suspended',
     DISABLED = 'disabled',
     DELETED = 'deleted',
+}
+
+export enum UserRole {
+    FREE = 'free',
+    PREMIUM = 'premium',
+    SUPERADMIN = 'superadmin',
 }
 
 @Entity('users')
@@ -32,13 +37,13 @@ export class Users extends BaseEntity {
     password: string;
 
     @Column({ type: "enum", enum: UserStatus, default: UserStatus.ACTIVE })
-    status: string;
+    status: UserStatus;
 
-    @Column({ type: 'timestamp', nullable: true })
+    @Column({ type: 'enum', enum: UserRole, default: UserRole.FREE })
+    role: UserRole;
+
+    @Column({ type: 'timestamp with time zone', nullable: true })
     deletedAt?: Date;
-
-    @OneToMany(() => UserRoles, userRole => userRole.user)
-    userRoles: UserRoles[];
 
     @OneToMany(() => UserOtp, otp => otp.user)
     otps: UserOtp[];

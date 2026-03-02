@@ -5,17 +5,14 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { HealthModule } from './health/health.module';
 
 import configuration from '@/shared/config/configuration';
-import validate, { Environment } from '@/shared/config/env.validation';
+import validate from '@/shared/config/env.validation';
 import { ResponseInterceptor } from '@/shared/interceptors/response/response.interceptor';
-import { ServeStaticModule } from '@nestjs/serve-static';
-import { join } from 'path';
 import { RequestLoggerMiddleware } from '@/shared/middleware/logging/logging.middleware';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SharedModule } from '@/shared/shared.module';
 import { RedisModule } from '@/external/redis/redis.module';
 import { EmailModule } from '@/external/email/email.module';
 import { AuthModule } from '@/modules/auth/presentation/auth.module';
-import { OrganizationsModule } from '@/modules/organizations/presentation/organizations.module';
 
 @Module({
     imports: [
@@ -24,41 +21,27 @@ import { OrganizationsModule } from '@/modules/organizations/presentation/organi
             validate: validate,
             isGlobal: true,
         }),
-        ServeStaticModule.forRoot({
-            rootPath: join(__dirname, '..', '..', 'src', 'app', 'assets'),
-            serveRoot: '/assets',
-            serveStaticOptions: {
-                index: false,
-            },
-        }),
         TypeOrmModule.forRootAsync({
             imports: [ConfigModule],
             inject: [ConfigService],
             useFactory: (configService: ConfigService) => {
                 const isProduction =
-                    configService.get<string>('app.env') === Environment.Production;
-                const enableSSL = configService.get<string>('database.ssl') === 'true';
+                    configService.get<string>('app.nodeEnv') === 'production';
 
                 return {
-                    type: configService.get<'mysql' | 'postgres' | 'aurora-mysql'>(
-                        'database.type',
-                        'postgres'
-                    ),
+                    type: 'postgres',
                     host: configService.get<string>('database.host'),
                     port: configService.get<number>('database.port'),
-                    username: configService.get<string>('database.username'),
+                    username: configService.get<string>('database.user'),
                     password: configService.get<string>('database.password'),
                     database: configService.get<string>('database.name'),
                     autoLoadEntities: true,
                     migrations: [__dirname + '/../migrations/*{.ts,.js}'],
-                    migrationsTableName: 'enterprise_migrations',
+                    migrationsTableName: 'poshpet_migrations',
                     logging: isProduction
                         ? ['error', 'warn']
                         : ['error', 'warn', 'info', 'log', 'query'],
-                    synchronize: !isProduction,
-                    ssl: enableSSL
-                        ? { rejectUnauthorized: false }
-                        : false,
+                    synchronize: false,
                 };
             },
         }),
@@ -66,8 +49,7 @@ import { OrganizationsModule } from '@/modules/organizations/presentation/organi
         RedisModule,
         HealthModule,
         AuthModule,
-        OrganizationsModule,
-        SharedModule
+        SharedModule,
     ],
     controllers: [AppController],
     providers: [

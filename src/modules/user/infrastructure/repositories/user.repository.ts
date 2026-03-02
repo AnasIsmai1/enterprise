@@ -18,7 +18,6 @@ export class UserRepository extends BaseRepository<Users> implements IUserReposi
     async findByEmail(email: string): Promise<Users | null> {
         return this.findOne({
             where: { email },
-            relations: ['userRoles', 'userRoles.role'],
         });
     }
 }

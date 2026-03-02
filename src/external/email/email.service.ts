@@ -1,7 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import axios, { AxiosInstance } from 'axios';
 import { ConfigService } from '@nestjs/config';
-import { EmailTemplatesService } from './email-templates.service';
 
 @Injectable()
 export class EmailService {
@@ -11,10 +10,9 @@ export class EmailService {
     private readonly sender: { email: string; name?: string };
 
     constructor(
-        private readonly templateService: EmailTemplatesService,
         private readonly configService: ConfigService,
     ) {
-        const apiKey = this.configService.get<string>('brevo.api_key');
+        const apiKey = this.configService.get<string>('email.brevoApiKey');
         this.axios = axios.create({
             baseURL: this.apiUrl,
             headers: {
@@ -25,35 +23,25 @@ export class EmailService {
         });
 
         this.sender = {
-            email: this.configService.get<string>('brevo.email', 'rollwithcode'),
-            name: this.configService.get<string>('brevo.email_name', 'rollwithcode'),
+            email: this.configService.get<string>('email.senderEmail', 'noreply@poshpet.com'),
+            name: this.configService.get<string>('email.senderName', 'PoshPet'),
         };
     }
 
-    async sendWelcomeEmail(to: string, username: string) {
-        const subject = 'Welcome to Our App!';
-        let htmlContent = this.templateService.getTemplate('welcome');
-        htmlContent = htmlContent.replace(/{{\s*username\s*}}/g, username);
-
-        return this.sendEmail(to, subject, htmlContent);
-    }
-
-    private async sendEmail(
+    async sendTransactionalEmail(
         to: string,
-        subject: string,
-        htmlContent: string,
-        sender = this.sender,
-    ): Promise<any> {
+        templateId: number,
+        params: Record<string, any> = {}
+    ): Promise<void> {
         try {
             const payload = {
-                sender,
+                sender: this.sender,
                 to: [{ email: to }],
-                subject,
-                htmlContent,
+                templateId,
+                params,
             };
             const response = await this.axios.post('', payload);
-            this.logger.log(`Email sent to ${to}: ${response.statusText}`);
-            return response.data;
+            this.logger.log(`Email sent to ${to} (templateId: ${templateId}): ${response.statusText}`);
         } catch (error: any) {
             this.logger.error(`Failed to send email to ${to}: ${error.message}`);
             throw new Error('Failed to Send Email');

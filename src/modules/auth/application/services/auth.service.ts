@@ -23,14 +23,14 @@ export class AuthService {
   async generateAccessToken(
     userId: string,
     email: string,
-    roles: string[]
+    role: string
   ): Promise<{ access_token: string; expires_in: string }> {
     const expiresIn =
       this.configService.get<string>('auth.jwt_expiration') || '15m';
     const payload = {
       sub: userId,
       email,
-      roles,
+      role,
       typ: 'access',
     };
 
@@ -84,12 +84,10 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    const roles = user.userRoles?.map((r) => r.role?.name) || [];
-
     const { access_token } = await this.generateAccessToken(
       user.id,
       user.email,
-      roles
+      user.role
     );
 
     const { refresh_token } = await this.generateRefreshToken(user.id);
@@ -102,7 +100,7 @@ export class AuthService {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        roles,
+        role: user.role,
       },
     };
   }
@@ -134,12 +132,10 @@ export class AuthService {
         throw new UnauthorizedException('User not found');
       }
 
-      const roles = user.userRoles?.map((r) => r.role?.name) || [];
-
       const { access_token } = await this.generateAccessToken(
         user.id,
         user.email,
-        roles
+        user.role
       );
 
       const { refresh_token } = await this.generateRefreshToken(user.id);
@@ -167,14 +163,12 @@ export class AuthService {
       throw new UnauthorizedException('User not found');
     }
 
-    const roles = user.userRoles?.map((r) => r.role?.name) || [];
-
     return {
       id: user.id,
       email: user.email,
       firstName: user.firstName,
       lastName: user.lastName,
-      roles,
+      role: user.role,
     };
   }
 
