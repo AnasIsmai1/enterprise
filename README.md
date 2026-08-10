@@ -1,6 +1,6 @@
 # Enterprise API
 
-A production-ready NestJS backend boilerplate with JWT authentication, PostgreSQL, Redis, and Docker support.
+A general-purpose NestJS backend boilerplate: better-auth identity with multi-tenant organizations and invitations, PostgreSQL, Redis, and Docker support.
 
 ---
 
@@ -14,8 +14,8 @@ A production-ready NestJS backend boilerplate with JWT authentication, PostgreSQ
 | Database | PostgreSQL 16 |
 | ORM | TypeORM 0.3 |
 | Cache | Redis 7 |
-| Auth | JWT + Passport |
-| Authorization | CASL |
+| Auth | better-auth (sessions, organizations, invitations) |
+| Authorization | `@Roles()` (app) + `@OrgRoles()` (per-organization) |
 | Validation | class-validator |
 | Documentation | Swagger/OpenAPI |
 | Containerization | Docker + Docker Compose |
@@ -41,7 +41,7 @@ cd enterprise
 cp .env.example .env
 
 # 3. Start all services with hot reload
-npm run docker:watch:dev
+pnpm docker:watch:dev
 
 # 4. API is available at http://localhost:5500
 ```
@@ -50,20 +50,20 @@ npm run docker:watch:dev
 
 ```bash
 # 1. Install dependencies
-npm install
+pnpm install
 
 # 2. Copy and configure environment
 cp .env.example .env
 # Edit .env with your database/redis connection details
 
 # 3. Run database migrations
-npm run db:migration:run
+pnpm db:migration:run
 
 # 4. Seed the database
-npm run db:seed
+pnpm db:seed
 
 # 5. Start development server
-npm run start:dev
+pnpm start:dev
 
 # API is available at http://localhost:5500
 ```
@@ -93,7 +93,7 @@ enterprise/
 │   │   └── redis/            # Redis module
 │   ├── migrations/            # TypeORM migrations
 │   ├── modules/               # Feature modules
-│   │   ├── auth/             # Authentication (JWT)
+│   │   ├── auth/             # better-auth config, guards, decorators
 │   │   ├── organizations/    # Organization management
 │   │   └── user/             # User management, RBAC
 │   ├── seeds/                 # Database seeding
@@ -116,44 +116,44 @@ enterprise/
 
 | Command | Description |
 |---------|-------------|
-| `npm run start:dev` | Start with hot reload |
-| `npm run start:debug` | Start with debugger |
-| `npm run lint` | Lint and fix code |
-| `npm run format` | Format code with Prettier |
-| `npm run test` | Run unit tests |
-| `npm run test:e2e` | Run E2E tests |
-| `npm run test:cov` | Run tests with coverage |
+| `pnpm start:dev` | Start with hot reload |
+| `pnpm start:debug` | Start with debugger |
+| `pnpm lint` | Lint and fix code |
+| `pnpm format` | Format code with Prettier |
+| `pnpm test` | Run unit tests |
+| `pnpm test:e2e` | Run E2E tests |
+| `pnpm test:cov` | Run tests with coverage |
 
 ### Database
 
 | Command | Description |
 |---------|-------------|
-| `npm run db:migration:create -- MigrationName` | Create blank migration |
-| `npm run db:migration:generate -- MigrationName` | Generate migration from entities |
-| `npm run db:migration:run` | Run pending migrations |
-| `npm run db:migration:revert` | Revert last migration |
-| `npm run db:seed` | Seed database |
+| `pnpm db:migration:create MigrationName` | Create blank migration |
+| `pnpm db:migration:generate MigrationName` | Generate migration from entities |
+| `pnpm db:migration:run` | Run pending migrations |
+| `pnpm db:migration:revert` | Revert last migration |
+| `pnpm db:seed` | Seed database |
 
 ### Docker - Development
 
 | Command | Description |
 |---------|-------------|
-| `npm run docker:watch:dev` | Start with hot reload (recommended) |
-| `npm run docker:up:dev` | Start services |
-| `npm run docker:down:dev` | Stop services |
-| `npm run docker:build:dev` | Rebuild containers |
-| `npm run docker:logs:dev` | View logs |
-| `npm run docker:clean:dev` | Stop and remove volumes |
+| `pnpm docker:watch:dev` | Start with hot reload (recommended) |
+| `pnpm docker:up:dev` | Start services |
+| `pnpm docker:down:dev` | Stop services |
+| `pnpm docker:build:dev` | Rebuild containers |
+| `pnpm docker:logs:dev` | View logs |
+| `pnpm docker:clean:dev` | Stop and remove volumes |
 
 ### Docker - Production
 
 | Command | Description |
 |---------|-------------|
-| `npm run docker:build:prod` | Build production image |
-| `npm run docker:up:prod` | Start in detached mode |
-| `npm run docker:down:prod` | Stop services |
-| `npm run docker:logs:prod` | View logs |
-| `npm run docker:restart:prod` | Restart services |
+| `pnpm docker:build:prod` | Build production image |
+| `pnpm docker:up:prod` | Start in detached mode |
+| `pnpm docker:down:prod` | Stop services |
+| `pnpm docker:logs:prod` | View logs |
+| `pnpm docker:restart:prod` | Restart services |
 
 ---
 
@@ -181,10 +181,12 @@ REDIS_HOST=localhost       # Use 'redis' in Docker
 REDIS_PORT=6379
 REDIS_PASSWORD=
 
-# Auth (JWT)
-JWT_SECRET=your-secret-key-change-in-production
-JWT_EXPIRATION=15m
-JWT_REFRESH_EXPIRATION=7d
+# Auth (better-auth)
+JWT_SECRET=your-secret-key-change-in-production   # >= 32 chars
+BETTER_AUTH_URL=http://localhost:5500             # public origin, used in email links
+AUTH_REQUIRE_EMAIL_VERIFICATION=true
+AUTH_SESSION_EXPIRATION=7d
+AUTH_INVITATION_EXPIRATION=7d
 
 # Email (optional)
 BREVO_API_KEY=
@@ -202,67 +204,91 @@ BREVO_EMAIL_NAME=
 GET /health              - Application health status
 ```
 
-### Authentication
+### Projects (reference org-scoped resource)
 
 ```
-POST /auth/signin        - Login with credentials
-GET  /auth/me            - Get current user (requires auth)
-POST /auth/refresh       - Refresh access token
-POST /auth/logout        - Logout and revoke tokens
+POST   /api/v1/projects       - Create in the active organization (owner/admin)
+GET    /api/v1/projects       - List, paginated
+GET    /api/v1/projects/:id   - Get one (404 for another org's row)
+PATCH  /api/v1/projects/:id   - Update (owner/admin)
+DELETE /api/v1/projects/:id   - Soft-delete (owner/admin)
 ```
 
-### Users
+Copy this module's shape for org-owned resources — see
+[docs/TENANCY.md](docs/TENANCY.md) — then delete it.
+
+### Account
 
 ```
-POST /users/signup       - Register new user
-POST /users/forgot-password    - Request password reset
-POST /users/reset-password     - Reset password with OTP
-POST /users/verify-email       - Verify email with OTP
-POST /users/resend-verification - Resend verification OTP
+GET    /api/v1/account/export - GDPR data export (JSON attachment)
+DELETE /api/auth/delete-user  - GDPR erasure, confirmed by email
 ```
 
-### Organizations
+### Authentication & Organizations
+
+Served by **better-auth** under `/api/auth/*` (outside Nest's `/api/v1` prefix and
+its response envelope). Full reference: [docs/AUTH.md](docs/AUTH.md).
 
 ```
-POST   /organizations    - Create organization
-GET    /organizations    - List user's organizations
-GET    /organizations/:id - Get organization details
-PUT    /organizations/:id - Update organization
-DELETE /organizations/:id - Delete organization
-POST   /organizations/:id/invite - Invite user
+POST /api/auth/sign-up/email          - Register (sends verification email)
+POST /api/auth/sign-in/email          - Sign in
+GET  /api/auth/get-session            - Current session + user
+POST /api/auth/sign-out               - Sign out
+GET  /api/auth/verify-email           - Verify email (link target)
+POST /api/auth/forget-password        - Request password reset
+POST /api/auth/reset-password         - Reset password with token
 ```
+
+```
+POST /api/auth/organization/create            - Create organization
+GET  /api/auth/organization/list              - List the caller's organizations
+POST /api/auth/organization/set-active        - Set active organization
+POST /api/auth/organization/invite-member     - Invite by email
+POST /api/auth/organization/accept-invitation - Accept an invitation
+GET  /api/auth/organization/list-members      - Members of the active org
+POST /api/auth/organization/update-member-role
+POST /api/auth/organization/remove-member
+```
+
+Every application route (`/api/v1/*`) requires a session by default; opt out with
+`@Public()`.
 
 ---
 
 ## Authentication
 
-This project uses JWT-based authentication:
+better-auth owns identity. Sessions are database-backed, not stateless JWTs.
 
-- **Access Token**: Short-lived (15m), sent in Authorization header or httpOnly cookie
-- **Refresh Token**: Long-lived (7d), stored in Redis with JTI tracking
-- **Token Rotation**: New refresh token issued on each refresh, old one revoked
+- **Web**: httpOnly session cookie, set automatically on sign-in.
+- **Mobile**: the sign-in response body carries a `token`; send it as
+  `Authorization: Bearer <token>`. The bearer plugin accepts it everywhere a
+  cookie would work.
+- **Email verification** is required before a session is issued
+  (`AUTH_REQUIRE_EMAIL_VERIFICATION`).
+- **Roles**: `@Roles(AppRole.ADMIN)` for application-level access,
+  `@OrgRoles('owner', 'admin')` for per-organization permissions.
 
 ### Making Authenticated Requests
 
 ```bash
-# Login
-curl -X POST http://localhost:5500/auth/signin \
+# Sign in — returns { token, user }
+curl -X POST http://localhost:5500/api/auth/sign-in/email \
   -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"password123"}'
+  -d '{"email":"user@example.com","password":"correct-horse-battery"}'
 
-# Use access token
-curl http://localhost:5500/auth/me \
-  -H "Authorization: Bearer <access_token>"
+# Mobile / API client: bearer token
+curl http://localhost:5500/api/v1/health \
+  -H "Authorization: Bearer <token>"
 
-# Or use cookies (automatically set on signin)
-curl http://localhost:5500/auth/me --cookie "access_token=<token>"
+# Browser: the cookie is sent automatically
+curl http://localhost:5500/api/auth/get-session --cookie "better-auth.session_token=<token>"
 ```
 
 ---
 
 ## Database Migrations
 
-Migrations are tracked in the `enterprise_migrations` table.
+Migrations are tracked in the `migrations` table.
 
 ### Workflow
 
@@ -270,18 +296,18 @@ Migrations are tracked in the `enterprise_migrations` table.
 # 1. Make changes to entity files
 
 # 2. Build the project (required for CLI)
-npm run build
+pnpm build
 
 # 3. Generate migration (just pass the name, path is automatic)
-npm run db:migration:generate -- AddNewColumn
+pnpm db:migration:generate AddNewColumn
 
 # 4. Review the generated file in src/migrations/
 
 # 5. Run migration
-npm run db:migration:run
+pnpm db:migration:run
 
 # 6. If needed, revert
-npm run db:migration:revert
+pnpm db:migration:revert
 ```
 
 See [docs/MIGRATIONS_AND_DOCKER.md](docs/MIGRATIONS_AND_DOCKER.md) for detailed documentation.
@@ -320,16 +346,16 @@ GitHub Actions workflow (`.github/workflows/main.yml`):
 
 ### Pre-push Hook
 
-Husky runs `npm run docker:build:dev` before each push to ensure the Docker build succeeds.
+Husky runs `pnpm docker:build:dev` before each push to ensure the Docker build succeeds.
 
 ### Linting & Formatting
 
 ```bash
 # Lint with auto-fix
-npm run lint
+pnpm lint
 
 # Format code
-npm run format
+pnpm format
 ```
 
 ---
@@ -341,11 +367,11 @@ The `scripts/` directory contains utility scripts for project setup and scaffold
 ### Initial Setup
 
 ```bash
-npm run dev:setup
+pnpm dev:setup
 ```
 
 This script (`scripts/setup.sh`):
-1. Installs npm dependencies (if not already installed)
+1. Installs dependencies (if not already installed)
 2. Copies `.env.example` to `.env` (if not already present)
 3. Checks for Docker and Docker Compose installation
 4. Verifies Docker daemon is running
@@ -354,16 +380,16 @@ This script (`scripts/setup.sh`):
 Options:
 ```bash
 # Development setup (default)
-npm run dev:setup
+pnpm dev:setup
 
 # Production setup
-npm run dev:setup prod
+pnpm dev:setup prod
 ```
 
 ### Module Scaffolding
 
 ```bash
-npm run module:setup <module-name>
+pnpm module:setup <module-name>
 ```
 
 This script (`scripts/module-setup.sh`) creates a new NestJS module with the Clean Architecture directory structure:
@@ -404,7 +430,7 @@ It also generates:
 Example:
 ```bash
 # Create a new "products" module
-npm run module:setup products
+pnpm module:setup products
 ```
 
 ---

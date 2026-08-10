@@ -42,10 +42,10 @@ This project uses **TypeORM** for database migrations. Migrations are version-co
 
 | Command | Description |
 |---------|-------------|
-| `npm run db:migration:create` | Create a blank migration file |
-| `npm run db:migration:generate` | Auto-generate migration from entity changes |
-| `npm run db:migration:run` | Run all pending migrations |
-| `npm run db:migration:revert` | Revert the last executed migration |
+| `pnpm db:migration:create` | Create a blank migration file |
+| `pnpm db:migration:generate` | Auto-generate migration from entity changes |
+| `pnpm db:migration:run` | Run all pending migrations |
+| `pnpm db:migration:revert` | Revert the last executed migration |
 
 ### Creating Migrations
 
@@ -57,10 +57,10 @@ When you modify an entity, TypeORM can automatically generate the migration SQL:
 # 1. Make changes to your entity files (e.g., add a new column)
 
 # 2. Build the project first (required for TypeORM CLI)
-npm run build
+pnpm build
 
 # 3. Generate migration with a descriptive name (path is automatic)
-npm run db:migration:generate -- AddUserPhoneNumber
+pnpm db:migration:generate AddUserPhoneNumber
 ```
 
 This creates a timestamped migration file like:
@@ -73,7 +73,7 @@ src/migrations/1704067200000-AddUserPhoneNumber.ts
 For complex changes that can't be auto-generated:
 
 ```bash
-npm run db:migration:create -- SeedInitialRoles
+pnpm db:migration:create SeedInitialRoles
 ```
 
 Then manually write the `up()` and `down()` methods.
@@ -106,20 +106,20 @@ export class AddUserPhoneNumber1704067200000 implements MigrationInterface {
 
 ```bash
 # Run all pending migrations
-npm run db:migration:run
+pnpm db:migration:run
 ```
 
-Migrations are tracked in the `enterprise_migrations` table. Only migrations that haven't been executed will run.
+Migrations are tracked in the `migrations` table. Only migrations that haven't been executed will run.
 
 ### Reverting Migrations
 
 ```bash
 # Revert the last migration
-npm run db:migration:revert
+pnpm db:migration:revert
 
 # Revert multiple migrations (run multiple times)
-npm run db:migration:revert
-npm run db:migration:revert
+pnpm db:migration:revert
+pnpm db:migration:revert
 ```
 
 ### Migration Best Practices
@@ -138,21 +138,21 @@ npm run db:migration:revert
 # Edit src/modules/user/core/entities/user.entity.ts
 
 # 2. Build project
-npm run build
+pnpm build
 
 # 3. Generate migration (just pass the name)
-npm run db:migration:generate -- AddUserStatus
+pnpm db:migration:generate AddUserStatus
 
 # 4. Review the generated migration file
 
 # 5. Run migration
-npm run db:migration:run
+pnpm db:migration:run
 
 # 6. Test the rollback
-npm run db:migration:revert
+pnpm db:migration:revert
 
 # 7. Re-run and commit
-npm run db:migration:run
+pnpm db:migration:run
 git add src/migrations/
 git commit -m "Add user status column"
 ```
@@ -169,7 +169,7 @@ The project uses a multi-stage Docker build with three stages:
 ┌─────────────────────────────────────────────────────────┐
 │  Stage 1: deps                                          │
 │  - Base: node:20-alpine                                 │
-│  - Installs all npm dependencies                        │
+│  - Installs all dependencies                        │
 │  - Cached for faster rebuilds                           │
 └─────────────────────────────────────────────────────────┘
                           ↓
@@ -228,50 +228,50 @@ The project uses a multi-stage Docker build with three stages:
 
 ```bash
 # Start all services
-npm run docker:up:dev
+pnpm docker:up:dev
 
 # Start with rebuild
-npm run docker:build:dev && npm run docker:up:dev
+pnpm docker:build:dev && pnpm docker:up:dev
 
 # Start with file watching (recommended)
-npm run docker:watch:dev
+pnpm docker:watch:dev
 
 # View logs
-npm run docker:logs:dev
+pnpm docker:logs:dev
 
 # Check service status
-npm run docker:status:dev
+pnpm docker:status:dev
 
 # Stop all services
-npm run docker:down:dev
+pnpm docker:down:dev
 
 # Stop and remove volumes (clean slate)
-npm run docker:clean:dev
+pnpm docker:clean:dev
 ```
 
 #### Production
 
 ```bash
 # Build production image
-npm run docker:build:prod
+pnpm docker:build:prod
 
 # Start in detached mode
-npm run docker:up:prod
+pnpm docker:up:prod
 
 # View logs
-npm run docker:logs:prod
+pnpm docker:logs:prod
 
 # Check service status
-npm run docker:status:prod
+pnpm docker:status:prod
 
 # Restart services
-npm run docker:restart:prod
+pnpm docker:restart:prod
 
 # Stop services
-npm run docker:down:prod
+pnpm docker:down:prod
 
 # Stop and remove volumes
-npm run docker:clean:prod
+pnpm docker:clean:prod
 ```
 
 ### Environment Variables
@@ -337,7 +337,7 @@ docker exec -it enterprise_postgres_dev psql -U postgres -d enterprise
 
 ```bash
 # Reset volumes
-npm run docker:clean:dev
+pnpm docker:clean:dev
 
 # Rebuild from scratch
 docker compose -f docker/docker-compose.dev.yaml build --no-cache
@@ -372,32 +372,32 @@ deploy:
 
 ```bash
 # 1. Start development environment
-npm run docker:watch:dev
+pnpm docker:watch:dev
 
 # 2. Make code changes (hot reload active)
 
 # 3. If you change entities, generate migration
-npm run build
-npm run db:migration:generate -- YourMigrationName
+pnpm build
+pnpm db:migration:generate YourMigrationName
 
 # 4. Run migration
-npm run db:migration:run
+pnpm db:migration:run
 
 # 5. Stop when done
-npm run docker:down:dev
+pnpm docker:down:dev
 ```
 
 ### Deployment Workflow
 
 ```bash
 # 1. Build production image
-npm run docker:build:prod
+pnpm docker:build:prod
 
 # 2. Run migrations (if any)
-npm run db:migration:run
+pnpm db:migration:run
 
 # 3. Start production
-npm run docker:up:prod
+pnpm docker:up:prod
 
 # 4. Verify health
 curl http://localhost:5500/health
