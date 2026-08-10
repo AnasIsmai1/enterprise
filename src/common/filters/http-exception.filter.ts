@@ -33,10 +33,13 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    const isDev = this.configService.get<string>('app.nodeEnv', 'development') === 'development';
+    const isDev =
+      this.configService.get<string>('app.nodeEnv', 'development') ===
+      'development';
     const status = exception.getStatus();
     const exceptionResponse = exception.getResponse();
-    const errorCode = HTTP_STATUS_TO_ERROR_CODE[status] ?? ErrorCode.INTERNAL_ERROR;
+    const errorCode =
+      HTTP_STATUS_TO_ERROR_CODE[status] ?? ErrorCode.INTERNAL_ERROR;
 
     // Extract message — ValidationPipe returns { message: string[], error: string, statusCode: number }
     let errorMessage: string;
@@ -45,19 +48,18 @@ export class HttpExceptionFilter implements ExceptionFilter {
     if (typeof exceptionResponse === 'string') {
       errorMessage = exceptionResponse;
     } else if (typeof exceptionResponse === 'object') {
-      const resp = exceptionResponse as Record<string, any>;
+      const resp = exceptionResponse as {
+        message?: string | string[];
+        field?: string;
+      };
 
       // Handle NestJS ValidationPipe errors (message is string[])
-      if (Array.isArray(resp.message)) {
-        errorMessage = resp.message[0];
-      } else {
-        errorMessage = resp.message || exception.message;
-      }
+      errorMessage = Array.isArray(resp.message)
+        ? resp.message[0]
+        : (resp.message ?? exception.message);
 
       // Include field if provided (e.g., custom exceptions with field context)
-      if (resp.field) {
-        field = resp.field;
-      }
+      field = resp.field;
     } else {
       errorMessage = exception.message;
     }
@@ -65,7 +67,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     // Log 4xx locally only (SEC-07)
     this.logger.warn(
       `[${request.method}] ${request.url} - ${status}: ${errorMessage}`,
-      HttpExceptionFilter.name,
+      HttpExceptionFilter.name
     );
 
     const body: Record<string, any> = {

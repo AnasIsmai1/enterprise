@@ -5,8 +5,8 @@ import { StorageService } from './storage.service';
 
 @Global()
 @Module({
-    imports: [ConfigModule, RedisModule],
-    providers: [StorageService],
-    exports: [StorageService],
+  imports: [ConfigModule, RedisModule],
+  providers: [StorageService],
+  exports: [StorageService],
 })
 export class StorageModule {}

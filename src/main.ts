@@ -20,16 +20,27 @@ import helmet from 'helmet';
 import { ConfigService } from '@nestjs/config';
 import { setupSwagger } from './shared/config/swagger';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
-import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
-import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import cookieParser from 'cookie-parser';
+import { Logger as PinoLogger } from 'nestjs-pino';
+import express from 'express';
+import type { AppAuth } from '@/modules/auth/auth.config';
+import { BETTER_AUTH } from './modules/auth/auth.config';
+
+/** better-auth mounts here; Nest's own routes live under /api/v1. */
+const AUTH_BASE_PATH = '/api/auth';
 
 async function bootstrap() {
+  // bodyParser: false is required. better-auth's handler reads the raw request
+  // stream; if Express has already consumed the body, every POST to /api/auth/*
+  // hangs. JSON parsing is re-enabled below, AFTER the auth handler is mounted.
   const app = await NestFactory.create(AppModule, {
-    logger: ['debug', 'log', 'warn'],
+    // bufferLogs holds startup logs until pino is resolved below, so boot output
+    // goes through the same formatter as everything else.
     bufferLogs: true,
+    bodyParser: false,
   });
+
+  app.useLogger(app.get(PinoLogger));
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('app.port', 5500);
@@ -38,12 +49,25 @@ async function bootstrap() {
   app.use(helmet());
   app.use(cookieParser());
 
+  // better-auth owns /api/auth/* — sign-up, sign-in, sessions, email
+  // verification, password reset, organizations, members, and invitations.
+  // Mounted as raw Express middleware so it bypasses Nest's pipeline entirely.
+  const { toNodeHandler } = await import('better-auth/node');
+  app.use(AUTH_BASE_PATH, toNodeHandler(app.get<AppAuth>(BETTER_AUTH)));
+
+  // Body parsing for everything else, now that the auth handler has its stream.
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+
   app.setGlobalPrefix('api');
 
   // CORS using CLIENT_URL from env (SEC-04)
   const clientUrl = configService.get<string>('app.clientUrl') ?? '';
   app.enableCors({
-    origin: clientUrl.split(',').map((s) => s.trim()).filter(Boolean),
+    origin: clientUrl
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
@@ -54,20 +78,11 @@ async function bootstrap() {
     type: VersioningType.URI,
   });
 
-  // Global exception filters (API-05, SEC-06, SEC-07, SEC-08)
-  // CRITICAL order: AllExceptionsFilter FIRST, HttpExceptionFilter SECOND.
-  // NestJS applies filters in reverse registration order, so HttpExceptionFilter
-  // executes first (catches HttpExceptions), AllExceptionsFilter catches everything else.
-  // Note: AllExceptionsFilter and HttpExceptionFilter are also registered via APP_FILTER
-  // in AppModule for DI (ConfigService injection). The useGlobalFilters here is for
-  // cases where DI-based filters need manual instantiation. Using APP_FILTER approach
-  // in app.module.ts is the primary registration; these lines can be removed if DI works.
-  //
-  // Since we use APP_FILTER in app.module.ts (which supports DI), we don't need
-  // useGlobalFilters here — but we keep LoggingInterceptor and ResponseInterceptor.
+  // Exception filters are registered via APP_FILTER in AppModule so they can
+  // inject ConfigService and EmailService.
 
-  // Global interceptors — LoggingInterceptor wraps outer, ResponseInterceptor wraps inner
-  app.useGlobalInterceptors(new LoggingInterceptor(), new ResponseInterceptor());
+  // Wraps every handler return value in { success, data }.
+  app.useGlobalInterceptors(new ResponseInterceptor());
 
   // Global validation pipe (API-14, API-16)
   app.useGlobalPipes(
@@ -75,7 +90,7 @@ async function bootstrap() {
       transform: true,
       whitelist: true,
       forbidNonWhitelisted: true,
-    }),
+    })
   );
 
   app.enableShutdownHooks();

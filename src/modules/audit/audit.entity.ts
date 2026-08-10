@@ -1,4 +1,10 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  Index,
+  PrimaryGeneratedColumn,
+} from 'typeorm';
 
 /**
  * Audit log entity — SEC-14.
@@ -17,14 +23,22 @@ export class AuditLog {
   @Column({ type: 'varchar', length: 100 })
   action: string; // 'LOGIN', 'LOGOUT', 'PASSWORD_RESET', 'DATA_ACCESS', 'ADMIN_ACTION', etc.
 
-  @Column({ type: 'uuid', nullable: true })
+  // text, not uuid: better-auth generates its own string ids for user rows, so a
+  // uuid column here would reject every real actor id.
+  @Index()
+  @Column({ type: 'text', nullable: true })
   actor_id: string; // user performing the action (null for system events)
 
   @Column({ type: 'varchar', length: 100 })
-  resource: string; // 'user', 'pet', 'subscription', etc.
+  resource: string; // 'user', 'organization', 'invitation', etc.
 
-  @Column({ type: 'uuid', nullable: true })
+  @Column({ type: 'text', nullable: true })
   resource_id: string;
+
+  // Which tenant the action belongs to, when it is org-scoped.
+  @Index()
+  @Column({ type: 'text', nullable: true })
+  organization_id: string;
 
   @Column({ type: 'varchar', length: 45, nullable: true })
   ip_address: string;

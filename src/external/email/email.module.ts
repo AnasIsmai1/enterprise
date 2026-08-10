@@ -6,12 +6,12 @@ import { EMAIL_QUEUE } from './email.types';
 
 @Global()
 @Module({
-    imports: [
-        BullModule.registerQueue({
-            name: EMAIL_QUEUE,
-        }),
-    ],
-    providers: [EmailService, EmailProcessor],
-    exports: [EmailService],
+  imports: [
+    BullModule.registerQueue({
+      name: EMAIL_QUEUE,
+    }),
+  ],
+  providers: [EmailService, EmailProcessor],
+  exports: [EmailService],
 })
 export class EmailModule {}

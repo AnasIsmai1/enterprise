@@ -1,13 +1,17 @@
+/**
+ * Logical bucket identifiers. The real bucket names are deployment-specific and
+ * resolved from config (R2_BUCKET_*) by StorageService — hardcoding them here
+ * meant every deployment but one pointed at buckets it does not own.
+ */
 export enum Bucket {
-    MEDIA = 'poshpet-media',      // Private: photos, avatars, vet attachments, circle media
-    CAPSULE = 'poshpet-capsules', // Restricted: encrypted time capsule content
-    STATIC = 'poshpet-static',   // Public CDN: static assets
+  MEDIA = 'MEDIA', // Private: user uploads
+  RESTRICTED = 'RESTRICTED', // Restricted: separate IAM credentials
+  STATIC = 'STATIC', // Public CDN: static assets
 }
 
 export enum UploadType {
-    PHOTO = 'PHOTO',                    // photos/{userId}/{petId}/{photoId}_{size}.jpg
-    AVATAR = 'AVATAR',                  // avatars/{userId}/{petId}_avatar.jpg
-    VET_ATTACHMENT = 'VET_ATTACHMENT',  // vet-attachments/{userId}/{visitId}/{attachmentId}.jpg
-    CIRCLE_MEDIA = 'CIRCLE_MEDIA',      // circle-media/{circleId}/{postId}/{mediaId}.jpg
-    MEMORY_PAGE = 'MEMORY_PAGE',        // memory-pages/{userId}/{pageId}_{type}
+  PHOTO = 'PHOTO', // photos/{userId}/{ownerId}/{photoId}_{size}.jpg
+  AVATAR = 'AVATAR', // avatars/{userId}/{ownerId}_avatar.jpg
+  ATTACHMENT = 'ATTACHMENT', // attachments/{userId}/{parentId}/{attachmentId}.jpg
+  DOCUMENT = 'DOCUMENT', // documents/{userId}/{documentId}_{type}
 }

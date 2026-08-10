@@ -11,6 +11,8 @@ import { ConfigService } from '@nestjs/config';
 import { Request, Response } from 'express';
 import * as Sentry from '@sentry/nestjs';
 import { ErrorCode, HTTP_STATUS_TO_ERROR_CODE } from '../enums/error-code.enum';
+import { EmailService } from '@/external/email/email.service';
+import { EmailType } from '@/external/email/email.types';
 
 /**
  * Global catch-all exception filter.
@@ -28,14 +30,19 @@ import { ErrorCode, HTTP_STATUS_TO_ERROR_CODE } from '../enums/error-code.enum';
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
 
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly configService: ConfigService,
+    private readonly emailService: EmailService
+  ) {}
 
   catch(exception: unknown, host: ArgumentsHost): void {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    const isDev = this.configService.get<string>('app.nodeEnv', 'development') === 'development';
+    const isDev =
+      this.configService.get<string>('app.nodeEnv', 'development') ===
+      'development';
 
     let status: number;
     let errorMessage: string;
@@ -46,13 +53,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
       // This branch handles cases where HttpExceptionFilter is not registered or missed.
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
-      errorMessage =
+      const responseMessage =
         typeof exceptionResponse === 'string'
           ? exceptionResponse
-          : (exceptionResponse as any).message || exception.message;
-      if (Array.isArray(errorMessage)) {
-        errorMessage = (errorMessage as string[])[0];
-      }
+          : (exceptionResponse as { message?: string | string[] }).message;
+      // class-validator returns an array of messages; surface the first.
+      errorMessage = Array.isArray(responseMessage)
+        ? responseMessage[0]
+        : (responseMessage ?? exception.message);
       errorCode = HTTP_STATUS_TO_ERROR_CODE[status] ?? ErrorCode.INTERNAL_ERROR;
     } else {
       status = HttpStatus.INTERNAL_SERVER_ERROR;
@@ -67,7 +75,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       this.logger.error(
         `[${request.method}] ${request.url} - ${status}`,
         exception instanceof Error ? exception.stack : String(exception),
-        AllExceptionsFilter.name,
+        AllExceptionsFilter.name
       );
 
       // SEC-08: Send admin alert email on critical failures (async, non-blocking)
@@ -80,7 +88,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       // SEC-07: 4xx errors are logged locally only (not Sentry)
       this.logger.warn(
         `[${request.method}] ${request.url} - ${status}: ${errorMessage}`,
-        AllExceptionsFilter.name,
+        AllExceptionsFilter.name
       );
     }
 
@@ -122,34 +130,48 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     return criticalMessages.some(
       (msg) =>
-        exception.message?.includes(msg) ||
-        exception.constructor?.name === msg,
+        exception.message?.includes(msg) || exception.constructor?.name === msg
     );
   }
 
   /**
-   * Sends an admin alert email for critical failures.
-   * Uses a try/catch so it doesn't crash if the email module is unavailable.
+   * Sends an admin alert email for critical failures (SEC-08, EMAIL-06).
+   *
+   * Enqueues onto BullMQ rather than calling Brevo inline — an alert must never
+   * add latency to, or throw inside, the error path that produced it.
    */
   private async sendAdminAlert(
     exception: unknown,
-    request: Request,
+    request: Request
   ): Promise<void> {
-    try {
-      // Email module (Plan 01-03) will provide BREVO_EMAIL_SERVICE token.
-      // Until then, this is a no-op — the try/catch above swallows the error.
-      const adminEmail = this.configService.get<string>('admin.email');
-      if (!adminEmail) return;
+    const adminEmail = this.configService.get<string>('admin.email');
+    if (!adminEmail) return;
 
-      // Log critical alert for now; actual email sending added in Plan 01-03
+    const message =
+      exception instanceof Error ? exception.message : String(exception);
+
+    try {
+      await this.emailService.send(EmailType.ADMIN_ALERT, {
+        to: adminEmail,
+        params: {
+          appName: this.configService.get<string>('app.name', 'API'),
+          environment: this.configService.get<string>(
+            'app.nodeEnv',
+            'development'
+          ),
+          message,
+          path: `${request.method} ${request.url}`,
+          stack: exception instanceof Error ? exception.stack : undefined,
+          timestamp: new Date().toISOString(),
+        },
+      });
+    } catch (error) {
+      // Alerting must never mask the original failure — log and move on.
       this.logger.error(
-        `CRITICAL FAILURE alert would be sent to ${adminEmail}: ${
-          exception instanceof Error ? exception.message : String(exception)
-        } | Path: ${request.url}`,
-        AllExceptionsFilter.name,
+        `Failed to enqueue admin alert for: ${message}`,
+        error instanceof Error ? error.stack : undefined,
+        AllExceptionsFilter.name
       );
-    } catch {
-      // Swallow — email sending is non-blocking
     }
   }
 }

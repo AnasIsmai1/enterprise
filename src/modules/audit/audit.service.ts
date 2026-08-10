@@ -17,7 +17,7 @@ import { AuditLog } from './audit.entity';
 export class AuditLogService {
   constructor(
     @InjectRepository(AuditLog)
-    private readonly auditRepository: Repository<AuditLog>,
+    private readonly auditRepository: Repository<AuditLog>
   ) {}
 
   async log(params: {
@@ -25,6 +25,7 @@ export class AuditLogService {
     actorId?: string;
     resource: string;
     resourceId?: string;
+    organizationId?: string;
     ipAddress?: string;
   }): Promise<void> {
     await this.auditRepository.save(
@@ -33,8 +34,9 @@ export class AuditLogService {
         actor_id: params.actorId,
         resource: params.resource,
         resource_id: params.resourceId,
+        organization_id: params.organizationId,
         ip_address: params.ipAddress,
-      }),
+      })
     );
   }
 }
