@@ -1,8 +1,15 @@
 #!/bin/sh
 set -e
 
-echo "Running database seed..."
-npm run db:seed
+echo "Running database migrations..."
+pnpm db:migration:run
+
+if [ -n "$ADMIN_PASSWORD" ]; then
+  echo "Seeding admin user..."
+  pnpm db:seed
+else
+  echo "ADMIN_PASSWORD not set - skipping admin seed."
+fi
 
 echo "Starting development server..."
-exec npm run start:dev
+exec pnpm start:dev

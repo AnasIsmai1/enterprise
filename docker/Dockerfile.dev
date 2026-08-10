@@ -1,20 +1,22 @@
 # =============================================================================
-# DEVELOPMENT DOCKERFILE - Multi-stage build with hot reload
+# DEVELOPMENT DOCKERFILE - hot reload via SWC (pnpm)
 # =============================================================================
 
-# -----------------------------------------------------------------------------
-# Stage 1: deps - Install all dependencies (including devDependencies)
-# -----------------------------------------------------------------------------
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
+
+ENV PNPM_HOME=/pnpm
+ENV PATH=$PNPM_HOME:$PATH
+RUN corepack enable
 
 WORKDIR /app
 
-COPY package*.json ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
-RUN npm ci
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile
 
 # -----------------------------------------------------------------------------
-# Stage 2: dev - Development server with hot reload
+# Stage 2: dev - development server with hot reload
 # -----------------------------------------------------------------------------
 FROM deps AS dev
 

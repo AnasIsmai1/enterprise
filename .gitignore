@@ -1,5 +1,4 @@
 # Misc.
-POSHPET.pdf
 
 # compiled output
 /dist
@@ -57,3 +56,7 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# graphify output — all generated, and stale the moment code changes.
+# Regenerate with: /graphify . --update
+graphify-out/

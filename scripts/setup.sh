@@ -3,10 +3,10 @@
 set -e
 
 if [ -d "node_modules" ]; then
-  echo "node_modules directory already exists. Skipping npm install."
+  echo "node_modules directory already exists. Skipping pnpm install."
 else
   echo "Installing Node.js dependencies..."
-  npm install
+  pnpm install
 fi
 
 if [ -f ".env" ]; then
@@ -55,14 +55,14 @@ echo "Docker Compose build finished."
 if [ -n "$SHELL" ] || [ -n "$TERM_PROGRAM" ] || [ -n "$WT_SESSION" ]; then
   echo "You are running in a Unix-like or modern terminal."
   echo "You can now start the project with:"
-  echo "  npm run docker:up:dev"
+  echo "  pnpm docker:up:dev"
   echo "or"
-  echo "  npm run docker:up:prod"
+  echo "  pnpm docker:up:prod"
 else
   echo "You may be running in a basic terminal."
   echo "For best results, use a Unix-like shell or modern terminal."
   echo "Then start the project with:"
-  echo "  npm run docker:up:dev"
+  echo "  pnpm docker:up:dev"
   echo "or"
-  echo "  npm run start:dev"
+  echo "  pnpm start:dev"
 fi

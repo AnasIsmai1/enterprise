@@ -3,8 +3,10 @@
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",
   "compilerOptions": {
+    "builder": "swc",
+    "typeCheck": true,
     "deleteOutDir": true,
-    "assets": ["external/email/templates/*.html", "app/assets/swagger.css"],
+    "assets": ["app/assets/swagger.css"],
     "watchAssets": true
   }
 }

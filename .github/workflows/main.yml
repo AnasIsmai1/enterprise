@@ -9,7 +9,7 @@ on:
     branches: [main, dev]
 
 env:
-  NODE_VERSION: 20
+  NODE_VERSION: 22
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
@@ -19,14 +19,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: 'pnpm'
 
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
 
-      - run: npm run test
+      # Non-mutating; fails on any error or warning. `pnpm lint` autofixes and is
+      # for local use.
+      - run: pnpm lint:check
+
+      - run: pnpm test
 
   build:
     runs-on: ubuntu-latest
@@ -34,14 +40,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
+          cache: 'pnpm'
 
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
 
-      - run: npm run build
+      # `nest build -b swc` runs tsc type-checking alongside SWC emit,
+      # so this job is also the type-check gate.
+      - run: pnpm build
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

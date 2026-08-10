@@ -1,0 +1,12 @@
+# pnpm 10 reads build-script allowlists from here, not package.json.
+# Only these packages may run install/postinstall scripts.
+onlyBuiltDependencies:
+  - '@swc/core'
+  - esbuild
+  - msgpackr-extract
+  - unrs-resolver
+
+# Transitive advisories that upstream has not released a bump for yet.
+# GHSA-pm4m-ph32-ghv5 — js-yaml DoS, reached via @nestjs/swagger.
+overrides:
+  js-yaml@>=5.0.0 <5.2.2: '>=5.2.2'
