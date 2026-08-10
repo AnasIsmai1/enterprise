@@ -19,9 +19,9 @@ import { map } from 'rxjs/operators';
  */
 @Injectable()
 export class ResponseInterceptor implements NestInterceptor {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     return next.handle().pipe(
-      map((data) => {
+      map((data: unknown) => {
         // Pass-through if already wrapped (has 'success' property)
         if (data !== null && typeof data === 'object' && 'success' in data) {
           return data;
@@ -34,10 +34,11 @@ export class ResponseInterceptor implements NestInterceptor {
           'items' in data &&
           'meta' in data
         ) {
+          const paginated = data;
           return {
             success: true,
-            data: data.items,
-            meta: data.meta,
+            data: paginated.items,
+            meta: paginated.meta,
           };
         }
 
@@ -46,7 +47,7 @@ export class ResponseInterceptor implements NestInterceptor {
           success: true,
           data,
         };
-      }),
+      })
     );
   }
 }
