@@ -14,4 +14,4 @@ import { RedisHealthIndicator } from '@/common/indicators/redis-health.indicator
   controllers: [HealthController],
   providers: [RedisHealthIndicator],
 })
-export class HealthModule { }
+export class HealthModule {}
