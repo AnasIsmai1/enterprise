@@ -1,16 +1,16 @@
 import { SetMetadata } from '@nestjs/common';
-import { UserRole } from '../../modules/user/core/entities/user.entity';
+import { AppRole } from '@/modules/auth/auth.config';
 
 export const ROLES_KEY = 'roles';
 
 /**
- * @Roles() decorator for role-based access control.
+ * Application-level role gate — distinct from @OrgRoles(), which checks a
+ * member's role inside their active organization.
  *
  * Usage:
- *   @Roles(UserRole.SUPERADMIN)
- *   @Roles(UserRole.PREMIUM, UserRole.SUPERADMIN)
+ *   @Roles(AppRole.ADMIN)
  *
- * Used with RolesGuard which reads this metadata.
- * Routes without @Roles() are treated as accessible to all authenticated users.
+ * Used with RolesGuard, which reads `req.user.role` populated by AuthGuard.
+ * Routes without @Roles() are open to any authenticated user.
  */
-export const Roles = (...roles: UserRole[]) => SetMetadata(ROLES_KEY, roles);
+export const Roles = (...roles: AppRole[]) => SetMetadata(ROLES_KEY, roles);

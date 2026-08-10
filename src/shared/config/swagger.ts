@@ -5,29 +5,32 @@ import { ConfigService } from '@nestjs/config';
 /**
  * Swagger/OpenAPI configuration — INFRA-04.
  *
- * PoshPet branding with Bearer JWT auth support.
+ * Title/description come from config so a fork does not have to edit code.
  * Accessible at /api/docs (configurable via swagger.route env).
  */
 export const setupSwagger = (
   app: INestApplication,
-  configService: ConfigService,
+  configService: ConfigService
 ) => {
   const options = new DocumentBuilder()
-    .setTitle('PoshPet API')
-    .setDescription('PoshPet Luxury Pet Care Planner API')
+    .setTitle(configService.get<string>('swagger.title', 'Enterprise API'))
+    .setDescription(
+      configService.get<string>(
+        'swagger.description',
+        'Enterprise API Documentation'
+      )
+    )
     .setVersion('1.0')
     // Bearer token auth (JWT) — use Authorize button with "Bearer <token>"
     .addBearerAuth(
       { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
-      'access-token',
+      'access-token'
     )
     // Cookie auth (for session-based flows)
     .addCookieAuth()
     // API group tags
     .addTag('auth', 'Authentication — register, login, refresh, logout')
     .addTag('users', 'User profile management')
-    .addTag('pets', 'Pet management')
-    .addTag('tasks', 'Daily care task management')
     .addTag('health', 'Application health checks')
     .build();
 
@@ -38,7 +41,10 @@ export const setupSwagger = (
     document,
     {
       customCss: '.swagger-ui .topbar { display: none }',
-      customSiteTitle: 'PoshPet API Documentation',
+      customSiteTitle: configService.get<string>(
+        'swagger.description',
+        'API Documentation'
+      ),
       swaggerOptions: {
         persistAuthorization: true,
         displayRequestDuration: true,
@@ -48,6 +54,6 @@ export const setupSwagger = (
           theme: 'monokai',
         },
       },
-    },
+    }
   );
 };

@@ -1,18 +1,21 @@
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import type { Request } from 'express';
+
+type SessionUser = NonNullable<Request['user']>;
 
 /**
- * @CurrentUser() param decorator — extracts authenticated user from request.
+ * @CurrentUser() param decorator — extracts the authenticated user from the
+ * request. AuthGuard populates it from the better-auth session.
  *
  * Usage:
- *   @CurrentUser() user: Users        — gets full user object
- *   @CurrentUser('id') userId: string — gets a specific field
- *
- * Requires JwtAuthGuard (Phase 2) to have populated req.user.
+ *   @CurrentUser() user: SessionUser   — the whole user
+ *   @CurrentUser('id') userId: string  — a single field
  */
 export const CurrentUser = createParamDecorator(
-  (data: string, ctx: ExecutionContext) => {
-    const request = ctx.switchToHttp().getRequest();
+  (data: keyof SessionUser | undefined, ctx: ExecutionContext) => {
+    const request = ctx.switchToHttp().getRequest<Request>();
     const user = request.user;
+
     return data ? user?.[data] : user;
-  },
+  }
 );

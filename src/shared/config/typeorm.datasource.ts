@@ -1,20 +1,25 @@
 import 'dotenv/config';
 import { DataSource } from 'typeorm';
-// Use relative imports for TypeORM CLI compatibility
-import { Users } from '../../modules/user/core/entities/user.entity';
-import { UserOtp } from '../../modules/user/core/entities/user_otp.entity';
-import { AuditLog } from '../../modules/audit/audit.entity';
 
+/**
+ * TypeORM owns application tables only. Identity tables (user, session, account,
+ * verification, organization, member, invitation) belong to better-auth and are
+ * created by the same migration chain — see the InitialSchema migration — but
+ * are not modelled as entities here.
+ */
 const typeormDataSource = new DataSource({
   type: 'postgres',
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432', 10),
   username: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASS || '',
-  database: process.env.DB_NAME || 'poshpet',
-  entities: [Users, UserOtp, AuditLog],
+  database: process.env.DB_NAME || 'enterprise',
+  // A glob, not a hand-maintained list. A list drifts silently, and a missing
+  // entity makes `migration:generate` emit an empty diff instead of the table
+  // you just added. Mirrors autoLoadEntities in AppModule.
+  entities: [__dirname + '/../../modules/**/*.entity{.ts,.js}'],
   migrations: [__dirname + '/../../migrations/*{.ts,.js}'],
-  migrationsTableName: 'poshpet_migrations',
+  migrationsTableName: 'migrations',
   synchronize: false,
   logging: ['error', 'warn'],
 });

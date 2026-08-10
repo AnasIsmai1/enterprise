@@ -1,38 +1,37 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import type { Request } from 'express';
 import { ROLES_KEY } from '../decorators/roles.decorator';
-import { UserRole } from '../../modules/user/core/entities/user.entity';
+import { AppRole } from '@/modules/auth/auth.config';
 
 /**
- * Role-based access guard — SEC-09, SEC-10.
+ * Application-level role guard — SEC-09, SEC-10.
  *
- * Reads @Roles() metadata from handler/class, checks against req.user.role.
- * If no @Roles() decorator is present, the guard allows access (endpoint is open to all).
+ * Reads @Roles() metadata and checks it against `req.user.role`, which AuthGuard
+ * populates from the better-auth session. No @Roles() means the route is open to
+ * any authenticated caller.
+ *
+ * For per-organization permissions use @OrgRoles() / OrgRolesGuard instead.
  *
  * NOTE: Resource ownership (SEC-09) is enforced in service methods, not guards.
- * Service methods scope all queries to req.user.id and return 404 (not 403)
- * for resources belonging to other users (SEC-10).
- *
- * Usage:
- *   Apply @UseGuards(JwtAuthGuard, RolesGuard) on controller/route level.
- *   Or register globally in AppModule: { provide: APP_GUARD, useClass: RolesGuard }
- *   (requires JwtAuthGuard to run first to populate req.user)
+ * Service methods scope queries to the caller and return 404 (not 403) for
+ * resources belonging to someone else (SEC-10).
  */
 @Injectable()
 export class RolesGuard implements CanActivate {
   constructor(private reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>(
+    const requiredRoles = this.reflector.getAllAndOverride<AppRole[]>(
       ROLES_KEY,
-      [context.getHandler(), context.getClass()],
+      [context.getHandler(), context.getClass()]
     );
 
-    if (!requiredRoles) {
-      return true; // No @Roles() decorator = open to all authenticated users
-    }
+    if (!requiredRoles) return true;
 
-    const { user } = context.switchToHttp().getRequest();
-    return requiredRoles.includes(user?.role);
+    const request = context.switchToHttp().getRequest<Request>();
+    const role = (request.user as { role?: string } | undefined)?.role;
+
+    return requiredRoles.includes(role as AppRole);
   }
 }
