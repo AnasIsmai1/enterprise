@@ -90,14 +90,6 @@ export class AppConfigDto {
   @MinLength(32)
   JWT_SECRET: string;
 
-  @IsOptional()
-  @IsString()
-  JWT_EXPIRATION?: string;
-
-  @IsOptional()
-  @IsString()
-  JWT_REFRESH_EXPIRATION?: string;
-
   // --- Optional integrations -------------------------------------------------
   // Not required to boot. The owning service throws when actually used without
   // them, so `pnpm start:dev` works with only Postgres and Redis available.

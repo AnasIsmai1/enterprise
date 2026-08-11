@@ -55,11 +55,6 @@ export default () => ({
   admin: {
     email: process.env.ADMIN_EMAIL,
   },
-  jwt: {
-    secret: process.env.JWT_SECRET,
-    expiration: process.env.JWT_EXPIRATION ?? '15m',
-    refreshExpiration: process.env.JWT_REFRESH_EXPIRATION ?? '7d',
-  },
   log: {
     level: process.env.LOG_LEVEL,
   },
