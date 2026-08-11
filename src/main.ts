@@ -14,6 +14,7 @@ if (process.env.SENTRY_DSN) {
 }
 
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app/app.module';
 import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
 import helmet from 'helmet';
@@ -33,7 +34,7 @@ async function bootstrap() {
   // bodyParser: false is required. better-auth's handler reads the raw request
   // stream; if Express has already consumed the body, every POST to /api/auth/*
   // hangs. JSON parsing is re-enabled below, AFTER the auth handler is mounted.
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     // bufferLogs holds startup logs until pino is resolved below, so boot output
     // goes through the same formatter as everything else.
     bufferLogs: true,
@@ -44,6 +45,18 @@ async function bootstrap() {
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('app.port', 5500);
+
+  // Exactly one hop — Caddy. Without this, everything behind the proxy sees
+  // Caddy's container IP as the client, so @nestjs/throttler buckets the entire
+  // internet into a single 100 req/min limit and audit_logs records the proxy as
+  // the actor for every action.
+  //
+  // Must NOT be `true` or 'loopback': an unbounded trust chain lets a client
+  // forge X-Forwarded-For and evade the throttler completely.
+  const trustProxyHops = configService.get<number>('app.trustProxyHops', 0);
+  if (trustProxyHops > 0) {
+    app.set('trust proxy', trustProxyHops);
+  }
 
   // Security (SEC-02 - HSTS via helmet)
   app.use(helmet());

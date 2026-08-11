@@ -6,6 +6,9 @@ export default () => ({
     nodeEnv: process.env.NODE_ENV,
     port: parseInt(process.env.PORT ?? '5500', 10),
     clientUrl: process.env.CLIENT_URL,
+    // Number of reverse proxies in front of the app. 0 = direct exposure.
+    // Set to 1 behind Caddy. See the trust-proxy note in main.ts.
+    trustProxyHops: parseInt(process.env.TRUST_PROXY_HOPS ?? '0', 10),
   },
   auth: {
     // better-auth signing secret. Falls back to JWT_SECRET so an existing .env

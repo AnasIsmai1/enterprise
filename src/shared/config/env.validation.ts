@@ -30,6 +30,13 @@ export class AppConfigDto {
   @IsString()
   CLIENT_URL: string;
 
+  // Reverse proxies in front of the app. 1 behind Caddy, 0 when direct.
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  TRUST_PROXY_HOPS?: number;
+
   // Branding — the one knob to rebrand this API for a new product.
   @IsOptional()
   @IsString()
