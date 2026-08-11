@@ -1,0 +1,31 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$API_DOMAIN} {
+	encode zstd gzip
+
+	# One root-level proxy, no path rewriting.
+	#
+	# Nest owns /api/v1/* (globalPrefix + URI versioning), better-auth is mounted
+	# as raw Express middleware at /api/auth/*, and health sits at /health
+	# outside both. `handle_path` would strip the matched prefix and break all
+	# three at once — Nest 404s and every auth POST dies. Forward paths intact.
+	reverse_proxy app:5500 {
+		# Caddy sets X-Forwarded-For/-Proto/-Host automatically. The app must run
+		# with TRUST_PROXY_HOPS=1 or the throttler buckets every client together.
+		health_uri /health
+		health_interval 30s
+	}
+
+	log {
+		output file /var/log/caddy/access.log {
+			roll_size 10MiB
+			roll_keep 5
+		}
+	}
+}
+
+{$STATUS_DOMAIN} {
+	reverse_proxy uptime-kuma:3001
+}

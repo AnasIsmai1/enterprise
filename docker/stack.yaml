@@ -1,0 +1,252 @@
+# =============================================================================
+# PRODUCTION — single-node Docker Swarm
+#
+# Deploy with ./scripts/deploy.sh, which runs migrations first and then rolls
+# out. Do NOT `docker compose up` this file: `deploy:` keys are inert under
+# Compose, so you would silently get one replica, no rolling update, and no
+# resource limits.
+#
+# Postgres is deliberately absent — production uses a managed instance. Local
+# Postgres lives in docker-compose.dev.yaml.
+# =============================================================================
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '3'
+
+services:
+  # ---------------------------------------------------------------------------
+  # Caddy — the only service with published ports. Terminates TLS, obtains and
+  # renews certificates automatically.
+  # ---------------------------------------------------------------------------
+  caddy:
+    image: caddy:2.10-alpine
+    logging: *logging
+    ports:
+      - target: 80
+        published: 80
+        mode: host
+      - target: 443
+        published: 443
+        mode: host
+      - target: 443
+        published: 443
+        protocol: udp
+        mode: host
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:?ACME_EMAIL required}
+      API_DOMAIN: ${API_DOMAIN:?API_DOMAIN required}
+      STATUS_DOMAIN: ${STATUS_DOMAIN:?STATUS_DOMAIN required}
+    volumes:
+      - ../docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Losing caddy_data means re-issuing certificates, and Let's Encrypt
+      # rate-limits duplicates to 5/week. This volume is not optional.
+      - caddy_data:/data
+      - caddy_config:/config
+    networks: [edge]
+    deploy:
+      replicas: 1
+      restart_policy: { condition: any }
+      resources:
+        limits: { memory: 256M }
+
+  # ---------------------------------------------------------------------------
+  # The API. Two replicas so updates roll rather than drop traffic.
+  # ---------------------------------------------------------------------------
+  app:
+    image: ${APP_IMAGE:?APP_IMAGE required, e.g. ghcr.io/eagleanalytix/enterprise:dev}
+    logging: *logging
+    env_file:
+      - path: ../.env
+        required: true
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      # Exactly one proxy hop (Caddy). Without this the throttler buckets every
+      # client into one shared limit — see the note in main.ts.
+      TRUST_PROXY_HOPS: '1'
+      # Managed Postgres. Verification stays on; supply DB_SSL_CA if the
+      # provider does not chain to a public root.
+      DB_SSL: 'true'
+      DB_PASS_FILE: /run/secrets/db_password
+      BETTER_AUTH_SECRET_FILE: /run/secrets/better_auth_secret
+      BREVO_API_KEY_FILE: /run/secrets/brevo_api_key
+    secrets: [db_password, better_auth_secret, brevo_api_key]
+    healthcheck:
+      # 127.0.0.1, not localhost: on Alpine localhost can resolve to ::1 while
+      # the app binds IPv4, which yields a permanently unhealthy healthy app.
+      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:5500/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    stop_grace_period: 30s
+    networks: [edge, backend]
+    deploy:
+      replicas: 2
+      update_config:
+        order: start-first
+        failure_action: rollback
+        delay: 10s
+        monitor: 60s
+      rollback_config:
+        order: start-first
+      restart_policy: { condition: any, delay: 5s }
+      resources:
+        limits: { memory: 1G }
+        reservations: { memory: 512M }
+
+  # ---------------------------------------------------------------------------
+  # Redis — sessions, auth rate-limit counters, and the BullMQ broker.
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7.4-alpine
+    logging: *logging
+    command:
+      - redis-server
+      - --appendonly
+      - 'yes'
+      - --appendfsync
+      - everysec
+      - --maxmemory
+      - 384mb
+      # noeviction is REQUIRED, not a preference. BullMQ stores each job as a
+      # hash plus membership in several lists; under an LRU policy Redis can
+      # evict the hash while the id remains queued, corrupting the queue in a
+      # way that surfaces hours later. Hitting the ceiling should be a loud
+      # write error, not silent data loss.
+      - --maxmemory-policy
+      - noeviction
+    volumes:
+      # Without this, every redeploy signs out every user and drops every
+      # queued email.
+      - redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    stop_grace_period: 30s
+    networks: [backend]
+    deploy:
+      replicas: 1
+      restart_policy: { condition: any }
+      resources:
+        # Above --maxmemory so Redis reports OOM cleanly instead of being
+        # killed by the kernel mid-fsync.
+        limits: { memory: 512M }
+
+  # ---------------------------------------------------------------------------
+  # Watchtower — MONITOR ONLY. It reports that a newer image exists and stops
+  # there. It must never restart anything: an unattended restart would deploy
+  # untested code and, before migrations moved out of the entrypoint, would
+  # have run them too.
+  # ---------------------------------------------------------------------------
+  watchtower:
+    image: containrrr/watchtower:1.7.1
+    logging: *logging
+    environment:
+      WATCHTOWER_MONITOR_ONLY: 'true'
+      # Redundant with MONITOR_ONLY on purpose — one typo must not silently
+      # re-enable automatic updates.
+      WATCHTOWER_NO_RESTART: 'true'
+      WATCHTOWER_CLEANUP: 'false'
+      WATCHTOWER_POLL_INTERVAL: '86400'
+      WATCHTOWER_NOTIFICATION_REPORT: 'true'
+      WATCHTOWER_NOTIFICATIONS_LEVEL: 'info'
+      WATCHTOWER_NOTIFICATION_URL: ${WATCHTOWER_NOTIFICATION_URL:?shoutrrr URL required}
+      TZ: ${TZ:-UTC}
+      # Talks to the API through the proxy below, never to the socket directly.
+      DOCKER_HOST: tcp://socket-proxy:2375
+    volumes:
+      # ghcr packages are private by default; without credentials Watchtower
+      # 401s on the one image you actually care about and reports nothing.
+      - ${DOCKER_CONFIG_DIR:-/root/.docker}/config.json:/config.json:ro
+    networks: [edge, socket]
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+      restart_policy: { condition: any }
+      resources:
+        limits: { memory: 128M }
+
+  # ---------------------------------------------------------------------------
+  # Socket proxy — the only container touching /var/run/docker.sock.
+  #
+  # Mounting the socket into Watchtower directly would give it the full Docker
+  # API, and `:ro` on a socket bind restricts the file, not the API: anything
+  # that can reach it can start a privileged container and own the host. This
+  # exposes read-only container and image endpoints and nothing else, so a
+  # Watchtower compromise stops being a host compromise.
+  # ---------------------------------------------------------------------------
+  socket-proxy:
+    image: tecnativa/docker-socket-proxy:0.3.0
+    logging: *logging
+    environment:
+      CONTAINERS: '1'
+      IMAGES: '1'
+      # Everything else stays denied. POST=0 makes the API read-only, so no
+      # container can be created, started, or killed through this proxy.
+      POST: '0'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [socket]
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+      restart_policy: { condition: any }
+      resources:
+        limits: { memory: 64M }
+
+  # ---------------------------------------------------------------------------
+  # Uptime Kuma — black-box probes and cert expiry.
+  #
+  # It runs on the box it watches, so it cannot tell you the box is down. Pair
+  # it with a free external check (UptimeRobot or similar) — see DEPLOYMENT.md.
+  # ---------------------------------------------------------------------------
+  uptime-kuma:
+    image: louislam/uptime-kuma:1.23.16
+    logging: *logging
+    volumes:
+      - kuma_data:/app/data
+    networks: [edge]
+    deploy:
+      replicas: 1
+      restart_policy: { condition: any }
+      resources:
+        limits: { memory: 256M }
+
+networks:
+  edge:
+    driver: overlay
+  # Watchtower <-> socket-proxy only. internal: true means neither can reach the
+  # internet over this network.
+  socket:
+    driver: overlay
+    internal: true
+  backend:
+    driver: overlay
+    # No default gateway: Redis gets no outbound internet at all. `app` keeps
+    # egress because it is also on `edge`.
+    internal: true
+
+volumes:
+  caddy_data:
+  caddy_config:
+  redis_data:
+  kuma_data:
+
+secrets:
+  db_password:
+    external: true
+    name: enterprise_db_password
+  better_auth_secret:
+    external: true
+    name: enterprise_better_auth_secret
+  brevo_api_key:
+    external: true
+    name: enterprise_brevo_api_key

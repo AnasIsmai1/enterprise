@@ -31,13 +31,6 @@
     "docker:watch:dev": "docker compose -f docker/docker-compose.dev.yaml up --build --watch",
     "docker:logs:dev": "docker compose -f docker/docker-compose.dev.yaml logs -f",
     "docker:status:dev": "docker compose -f docker/docker-compose.dev.yaml ps",
-    "docker:up:prod": "docker compose -f docker/docker-compose.yaml up -d",
-    "docker:down:prod": "docker compose -f docker/docker-compose.yaml down",
-    "docker:build:prod": "docker compose -f docker/docker-compose.yaml build",
-    "docker:clean:prod": "docker compose -f docker/docker-compose.yaml down -v --remove-orphans",
-    "docker:logs:prod": "docker compose -f docker/docker-compose.yaml logs -f",
-    "docker:status:prod": "docker compose -f docker/docker-compose.yaml ps",
-    "docker:restart:prod": "docker compose -f docker/docker-compose.yaml restart",
     "db:seed": "tsx src/seeds/index.ts",
     "db:migration:create": "sh -c 'typeorm migration:create src/migrations/$0'",
     "db:migration:generate": "sh -c 'tsx ./node_modules/typeorm/cli.js migration:generate src/migrations/$0 -d src/shared/config/typeorm.datasource.ts'",
@@ -54,7 +47,13 @@
     "prepare": "husky",
     "auth:sql": "tsx scripts/print-auth-sql.ts",
     "brevo:sync": "tsx scripts/brevo-sync-templates.ts",
-    "lint:check": "eslint \"{src,test,scripts}/**/*.ts\" --max-warnings 0"
+    "lint:check": "eslint \"{src,test,scripts}/**/*.ts\" --max-warnings 0",
+    "deploy": "sh scripts/deploy.sh",
+    "stack:status": "docker stack services enterprise",
+    "stack:logs": "docker service logs -f enterprise_app",
+    "stack:rollback": "docker service rollback enterprise_app",
+    "stack:down": "docker stack rm enterprise",
+    "deploy:no-migrate": "sh scripts/deploy.sh --skip-migrate"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1106.0",

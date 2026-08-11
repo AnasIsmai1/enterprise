@@ -41,28 +41,19 @@ fi
 
 echo "Setup complete!"
 
-echo "Building Docker Compose stack..."
+# This script bootstraps local development only. Production is a Docker Swarm
+# stack deployed by scripts/deploy.sh, which must run migrations before the
+# rollout — `compose up` cannot express that ordering.
 if [ "$1" = "prod" ]; then
-  echo "Building production stack using docker/docker-compose.prod.yaml"
-  docker compose -f docker/docker-compose.prod.yaml up --build -d
-else
-  echo "Building development stack using docker/docker-compose.dev.yaml"
-  docker compose -f docker/docker-compose.dev.yaml up --build -d
+  echo "Production is not deployed with this script." >&2
+  echo "Use 'pnpm deploy' (docker/stack.yaml). See docs/DEPLOYMENT.md." >&2
+  exit 1
 fi
+
+echo "Building development stack using docker/docker-compose.dev.yaml"
+docker compose -f docker/docker-compose.dev.yaml up --build -d
 
 echo "Docker Compose build finished."
-
-if [ -n "$SHELL" ] || [ -n "$TERM_PROGRAM" ] || [ -n "$WT_SESSION" ]; then
-  echo "You are running in a Unix-like or modern terminal."
-  echo "You can now start the project with:"
-  echo "  pnpm docker:up:dev"
-  echo "or"
-  echo "  pnpm docker:up:prod"
-else
-  echo "You may be running in a basic terminal."
-  echo "For best results, use a Unix-like shell or modern terminal."
-  echo "Then start the project with:"
-  echo "  pnpm docker:up:dev"
-  echo "or"
-  echo "  pnpm start:dev"
-fi
+echo "Start the project with:"
+echo "  pnpm docker:up:dev   # everything in containers"
+echo "  pnpm start:dev       # app on the host, Postgres and Redis in Docker"
