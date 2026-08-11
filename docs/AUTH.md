@@ -37,7 +37,7 @@ TOKEN=$(curl -s -X POST $API/sign-in/email \
 
 # Use it anywhere
 curl $API/organization/list -H "authorization: Bearer $TOKEN"
-curl http://localhost:5500/api/v1/health -H "authorization: Bearer $TOKEN"
+curl http://localhost:5500/api/v1/projects -H "authorization: Bearer $TOKEN"
 ```
 
 ---
@@ -155,14 +155,31 @@ context. Do not "simplify" it back to `NestFactory.createApplicationContext`.
 
 ---
 
+## Rate limiting
+
+Two layers. The global `@nestjs/throttler` (100 req/min) covers `/api/v1/*`;
+better-auth applies its own, tighter limits to credential endpoints
+(`auth.config.ts`):
+
+| Endpoint | Limit |
+|---|---|
+| `/sign-in/email` | 5 / minute |
+| `/sign-up/email` | 10 / hour |
+| `/forget-password`, `/reset-password` | 5 / hour |
+| `/send-verification-email` | 5 / hour |
+| `/organization/invite-member` | 50 / hour |
+
+Counters live in Redis (`secondaryStorage`), so limits hold across replicas.
+
+**Behind a proxy this depends on `TRUST_PROXY_HOPS`.** At `0` behind Caddy every
+request appears to come from the proxy and the whole internet shares one bucket.
+
 ## Known gaps
 
 - No social login. The plugins exist (`socialProviders` in `auth.config.ts`);
   nothing is configured.
 - No 2FA. `better-auth/plugins/two-factor` is available and unused.
-- Rate limiting is the global 100 req/min throttle. better-auth has its own
-  `rateLimit` options for auth-specific limits (e.g. per-email sign-in attempts)
-  that are not configured.
+- Social login and 2FA are unconfigured (plugins exist, no credentials wired).
 - `BREVO_TEMPLATE_*` must be set or verification, reset, and invitation emails
   fail in the queue. They fail loudly with the missing variable named. Generate
   them from `templates/brevo/*.html`:
@@ -172,3 +189,5 @@ context. Do not "simplify" it back to `NestFactory.createApplicationContext`.
   ```
 
   The script matches templates by name, so re-running updates in place.
+- Account deletion is `POST /api/auth/delete-user` (not DELETE), confirmed by
+  email before anything is removed.

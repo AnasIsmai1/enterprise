@@ -1,404 +1,213 @@
-# Migrations and Docker Setup Guide
+# Migrations and Docker
 
-This document explains how to work with database migrations and Docker in this project.
+## Two schema owners, one migration chain
 
----
+The database has two owners:
 
-## Table of Contents
+- **better-auth** owns `user`, `session`, `account`, `verification`,
+  `organization`, `member`, `invitation`. It reaches Postgres through Kysely
+  with its own `pg` pool, not TypeORM.
+- **TypeORM** owns application tables (`audit_logs`, `projects`).
 
-- [Database Migrations](#database-migrations)
-  - [Overview](#overview)
-  - [Migration Commands](#migration-commands)
-  - [Creating Migrations](#creating-migrations)
-  - [Running Migrations](#running-migrations)
-  - [Reverting Migrations](#reverting-migrations)
-  - [Migration Best Practices](#migration-best-practices)
-- [Docker Setup](#docker-setup)
-  - [Architecture](#architecture)
-  - [Development Environment](#development-environment)
-  - [Production Environment](#production-environment)
-  - [Docker Commands](#docker-commands)
-  - [Environment Variables](#environment-variables)
-  - [Troubleshooting](#troubleshooting)
+better-auth ships its own migration CLI. **It is deliberately not used.** Two
+independent tools writing the same schema means two sources of truth and no
+single ordering. Instead, `pnpm auth:sql` prints the DDL better-auth needs for
+its current plugin set, and that output is pasted into a TypeORM migration.
 
----
+`pnpm db:migration:run` stays the only way the schema ever changes.
 
-## Database Migrations
-
-### Overview
-
-This project uses **TypeORM** for database migrations. Migrations are version-controlled database schema changes that allow you to:
-
-- Track schema changes over time
-- Deploy consistent database schemas across environments
-- Rollback changes if needed
-- Collaborate on schema changes with your team
-
-**Key files:**
-- `src/shared/config/typeorm.datasource.ts` - TypeORM CLI configuration
-- `src/migrations/` - Migration files directory
-
-### Migration Commands
-
-| Command | Description |
-|---------|-------------|
-| `pnpm db:migration:create` | Create a blank migration file |
-| `pnpm db:migration:generate` | Auto-generate migration from entity changes |
-| `pnpm db:migration:run` | Run all pending migrations |
-| `pnpm db:migration:revert` | Revert the last executed migration |
-
-### Creating Migrations
-
-#### Option 1: Auto-generate from Entity Changes (Recommended)
-
-When you modify an entity, TypeORM can automatically generate the migration SQL:
-
-```bash
-# 1. Make changes to your entity files (e.g., add a new column)
-
-# 2. Build the project first (required for TypeORM CLI)
-pnpm build
-
-# 3. Generate migration with a descriptive name (path is automatic)
-pnpm db:migration:generate AddUserPhoneNumber
-```
-
-This creates a timestamped migration file like:
-```
-src/migrations/1704067200000-AddUserPhoneNumber.ts
-```
-
-#### Option 2: Create Blank Migration
-
-For complex changes that can't be auto-generated:
-
-```bash
-pnpm db:migration:create SeedInitialRoles
-```
-
-Then manually write the `up()` and `down()` methods.
-
-#### Migration File Structure
-
-```typescript
-import { MigrationInterface, QueryRunner } from 'typeorm';
-
-export class AddUserPhoneNumber1704067200000 implements MigrationInterface {
-  name = 'AddUserPhoneNumber1704067200000';
-
-  public async up(queryRunner: QueryRunner): Promise<void> {
-    // Changes to apply
-    await queryRunner.query(`
-      ALTER TABLE "users" ADD "phone" varchar(20)
-    `);
-  }
-
-  public async down(queryRunner: QueryRunner): Promise<void> {
-    // How to revert the changes
-    await queryRunner.query(`
-      ALTER TABLE "users" DROP COLUMN "phone"
-    `);
-  }
-}
-```
-
-### Running Migrations
-
-```bash
-# Run all pending migrations
-pnpm db:migration:run
-```
-
-Migrations are tracked in the `migrations` table. Only migrations that haven't been executed will run.
-
-### Reverting Migrations
-
-```bash
-# Revert the last migration
-pnpm db:migration:revert
-
-# Revert multiple migrations (run multiple times)
-pnpm db:migration:revert
-pnpm db:migration:revert
-```
-
-### Migration Best Practices
-
-1. **Always generate migrations** - Never use `synchronize: true` in production
-2. **Test migrations locally** - Run both `up` and `down` before committing
-3. **Use descriptive names** - `AddUserEmailVerification` not `Update1`
-4. **Keep migrations small** - One logical change per migration
-5. **Never modify executed migrations** - Create new ones instead
-6. **Backup before running** - Especially in production
-
-#### Example Workflow
-
-```bash
-# 1. Create/modify entity
-# Edit src/modules/user/core/entities/user.entity.ts
-
-# 2. Build project
-pnpm build
-
-# 3. Generate migration (just pass the name)
-pnpm db:migration:generate AddUserStatus
-
-# 4. Review the generated migration file
-
-# 5. Run migration
-pnpm db:migration:run
-
-# 6. Test the rollback
-pnpm db:migration:revert
-
-# 7. Re-run and commit
-pnpm db:migration:run
-git add src/migrations/
-git commit -m "Add user status column"
-```
+**Key files**
+- `src/shared/config/typeorm.datasource.ts` — CLI datasource. Entities are a
+  glob, not a hand-maintained list; a list drifts, and a missing entity makes
+  `migration:generate` emit an empty diff for a table you just added.
+- `src/shared/config/database.config.ts` — connection settings shared by all
+  four places that open a Postgres connection.
+- `src/migrations/` — the migration files.
+- `scripts/print-auth-sql.ts` — behind `pnpm auth:sql`.
 
 ---
 
-## Docker Setup
+## Commands
 
-### Architecture
+| Command | What it does |
+|---|---|
+| `pnpm db:migration:create <Name>` | Empty migration file |
+| `pnpm db:migration:generate <Name>` | Diff entities against the live DB |
+| `pnpm db:migration:run` | Apply pending migrations |
+| `pnpm db:migration:revert` | Revert the last one |
+| `pnpm auth:sql` | Print better-auth's required DDL |
+| `pnpm db:seed` | Seed the admin user (needs `ADMIN_EMAIL` + `ADMIN_PASSWORD`) |
 
-The project uses a multi-stage Docker build with three stages:
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  Stage 1: deps                                          │
-│  - Base: node:20-alpine                                 │
-│  - Installs all dependencies                        │
-│  - Cached for faster rebuilds                           │
-└─────────────────────────────────────────────────────────┘
-                          ↓
-┌─────────────────────────────────────────────────────────┐
-│  Stage 2: build                                         │
-│  - Copies source code                                   │
-│  - Compiles TypeScript to JavaScript                    │
-└─────────────────────────────────────────────────────────┘
-                          ↓
-┌─────────────────────────────────────────────────────────┐
-│  Stage 3: run (Production only)                         │
-│  - Minimal image with only production files             │
-│  - Non-root user (nestjs:1001)                          │
-│  - dumb-init for proper signal handling                 │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Development Environment
-
-**Files:**
-- `docker/Dockerfile.dev` - Development Dockerfile
-- `docker/docker-compose.dev.yaml` - Development compose configuration
-- `docker/entrypoint.dev.sh` - Development entrypoint script
-
-**Services:**
-| Service | Port | Description |
-|---------|------|-------------|
-| app | 5500 | NestJS application (hot reload) |
-| postgres | 5432 | PostgreSQL 16 database |
-| redis | 6379 | Redis 7 cache |
-
-**Features:**
-- Hot reload via volume mounts
-- Source code synced to container
-- Auto-rebuild on package.json changes
-- Interactive terminal (stdin/tty)
-
-### Production Environment
-
-**Files:**
-- `docker/Dockerfile` - Production Dockerfile (multi-stage)
-- `docker/docker-compose.yaml` - Production compose configuration
-- `docker/entrypoint.sh` - Production entrypoint script
-
-**Features:**
-- Minimal image size (~200MB vs ~800MB dev)
-- Non-root user for security
-- Health checks on all services
-- Resource limits (memory/CPU)
-- Automatic restart on failure
-- Runs database seeds on startup
-
-### Docker Commands
-
-#### Development
-
-```bash
-# Start all services
-pnpm docker:up:dev
-
-# Start with rebuild
-pnpm docker:build:dev && pnpm docker:up:dev
-
-# Start with file watching (recommended)
-pnpm docker:watch:dev
-
-# View logs
-pnpm docker:logs:dev
-
-# Check service status
-pnpm docker:status:dev
-
-# Stop all services
-pnpm docker:down:dev
-
-# Stop and remove volumes (clean slate)
-pnpm docker:clean:dev
-```
-
-#### Production
-
-```bash
-# Build production image
-pnpm docker:build:prod
-
-# Start in detached mode
-pnpm docker:up:prod
-
-# View logs
-pnpm docker:logs:prod
-
-# Check service status
-pnpm docker:status:prod
-
-# Restart services
-pnpm docker:restart:prod
-
-# Stop services
-pnpm docker:down:prod
-
-# Stop and remove volumes
-pnpm docker:clean:prod
-```
-
-### Environment Variables
-
-Create a `.env` file from the example:
-
-```bash
-cp .env.example .env
-```
-
-**Required variables:**
-
-```env
-# App
-NODE_ENV=development
-PORT=5500
-
-# Database
-DB_HOST=localhost      # Use 'postgres' when running in Docker
-DB_PORT=5432
-DB_USER=postgres
-DB_PASS=postgres
-DB_NAME=enterprise
-DB_SSL=false
-
-# Redis
-REDIS_HOST=localhost   # Use 'redis' when running in Docker
-REDIS_PORT=6379
-
-# Auth
-JWT_SECRET=your-secret-key-change-in-production
-JWT_EXPIRATION=15m
-JWT_REFRESH_EXPIRATION=7d
-```
-
-**Note:** When running with Docker Compose, the `DB_HOST` and `REDIS_HOST` are automatically overridden to use the container service names (`postgres` and `redis`).
-
-### Troubleshooting
-
-#### Container won't start
-
-```bash
-# Check logs
-docker compose -f docker/docker-compose.dev.yaml logs app
-
-# Check if ports are in use
-lsof -i :5500
-lsof -i :5432
-lsof -i :6379
-```
-
-#### Database connection issues
-
-```bash
-# Verify postgres is healthy
-docker compose -f docker/docker-compose.dev.yaml ps
-
-# Connect to postgres directly
-docker exec -it enterprise_postgres_dev psql -U postgres -d enterprise
-```
-
-#### Permission issues
-
-```bash
-# Reset volumes
-pnpm docker:clean:dev
-
-# Rebuild from scratch
-docker compose -f docker/docker-compose.dev.yaml build --no-cache
-```
-
-#### Hot reload not working
-
-1. Ensure you're using `docker:watch:dev` not `docker:up:dev`
-2. Check that `src/` is properly mounted in the container
-3. Verify file changes are syncing:
-
-```bash
-docker exec -it enterprise_app_dev ls -la /app/src
-```
-
-#### Out of memory
-
-Increase Docker's memory limit in Docker Desktop settings, or adjust the compose file limits:
-
-```yaml
-deploy:
-  resources:
-    limits:
-      memory: 2G  # Increase from 1G
-```
+No build step is needed — the CLI runs under `tsx` against the TypeScript
+datasource.
 
 ---
 
-## Quick Reference
-
-### Daily Development Workflow
+## Changing application entities
 
 ```bash
-# 1. Start development environment
-pnpm docker:watch:dev
-
-# 2. Make code changes (hot reload active)
-
-# 3. If you change entities, generate migration
-pnpm build
-pnpm db:migration:generate YourMigrationName
-
-# 4. Run migration
+# 1. Edit or add an entity, e.g. src/modules/project/project.entity.ts
+# 2. Generate the diff (needs a running database)
+pnpm db:migration:generate AddProjectArchivedAt
+# 3. Read the generated SQL. Always. Then:
 pnpm db:migration:run
-
-# 5. Stop when done
-pnpm docker:down:dev
 ```
 
-### Deployment Workflow
+Generated migrations are a starting point, not an answer. TypeORM will happily
+emit a `DROP COLUMN` for something it merely failed to see.
+
+## Changing better-auth configuration
+
+Adding a plugin or an `additionalFields` entry changes better-auth's schema.
+TypeORM cannot see those tables, so `migration:generate` will **not** produce
+them.
 
 ```bash
-# 1. Build production image
-pnpm docker:build:prod
-
-# 2. Run migrations (if any)
+# 1. Edit src/modules/auth/auth.config.ts
+# 2. Print the full desired schema
+pnpm auth:sql
+# 3. Diff it against the current migrations, create one for the delta
+pnpm db:migration:create AddTwoFactorTables
+# 4. Paste the delta in, then:
 pnpm db:migration:run
-
-# 3. Start production
-pnpm docker:up:prod
-
-# 4. Verify health
-curl http://localhost:5500/health
 ```
+
+Skipping step 2 is the most common way to ship a broken deploy: the app boots,
+and the first sign-in fails on a missing table.
+
+---
+
+## Migrations must be backward-compatible
+
+Production runs `replicas: 2` with rolling updates, so **the old and new
+versions serve traffic at the same time** during every deploy. A migration that
+breaks the running version takes the site down mid-rollout.
+
+Expand/contract, always:
+
+1. **Expand** — add the column/table, nullable or defaulted. Deploy.
+2. **Migrate** — backfill; write to both shapes. Deploy.
+3. **Contract** — once nothing reads the old shape, drop it. Deploy.
+
+Renaming a column is three releases. Dropping one in the same release that stops
+using it will 500 every request served by the old replica during the rollout.
+
+Also note: `src/migrations/1786360000000-InitialSchema.ts` names the
+`audit_logs` indexes with TypeORM's generated hashes rather than friendly names.
+That is deliberate — they must match what `@Index()` produces, or
+`migration:generate` reports a rename on every single run forever.
+
+---
+
+## Where migrations run
+
+| Environment | When |
+|---|---|
+| Development | On container start, in `docker/entrypoint.dev.sh`. One replica, no race. |
+| Production | Once, before rollout, by `scripts/deploy.sh`. |
+
+Production deliberately does **not** migrate in the entrypoint. With two
+replicas both tasks would race `migration:run`, and TypeORM takes no advisory
+lock — the result is a half-applied schema and a poisoned `migrations` table.
+
+---
+
+## Docker
+
+### Development — `docker/docker-compose.dev.yaml`
+
+App, Postgres 16, Redis 7. Hot reload via bind-mounted `src/` plus SWC watch.
+
+```bash
+pnpm docker:up:dev       # start
+pnpm docker:watch:dev    # start with compose watch
+pnpm docker:logs:dev     # follow logs
+pnpm docker:down:dev     # stop
+pnpm docker:clean:dev    # stop and DESTROY volumes
+```
+
+| Service | Host port |
+|---|---|
+| app | 5500 |
+| postgres | `127.0.0.1:${DB_PORT:-5433}` |
+| redis | `127.0.0.1:${REDIS_PORT:-6379}` |
+
+Postgres defaults to **5433** on the host because a locally installed Postgres
+on 5432 shadows the container and fails with a confusing "role does not exist".
+Inside compose the app always talks to 5432.
+
+Redis runs with `--appendonly yes` and `--maxmemory-policy noeviction`, matching
+production. `noeviction` is required by BullMQ — under an LRU policy Redis can
+evict a job hash while its id stays queued, corrupting the queue in a way that
+surfaces hours later. Dev matches prod so the bug cannot hide locally.
+
+### Production — `docker/stack.yaml`
+
+A single-node Docker **Swarm** stack, not Compose. Postgres is not in it —
+production uses a managed instance. See **[DEPLOYMENT.md](./DEPLOYMENT.md)**.
+
+```bash
+pnpm deploy          # migrate, then rolling update
+pnpm stack:status
+pnpm stack:rollback
+```
+
+### Production image — `docker/Dockerfile`
+
+Four stages on `node:22-alpine`:
+
+| Stage | Purpose |
+|---|---|
+| `base` | corepack + pnpm, lockfiles copied |
+| `build` | full dependency tree, `pnpm build` (SWC) |
+| `prod-deps` | production dependencies only |
+| `run` | dist + prod deps, non-root `nestjs:1001`, `dumb-init` as PID 1 |
+
+Carries a `HEALTHCHECK` against `http://127.0.0.1:5500/health` — `127.0.0.1`
+rather than `localhost` because on Alpine `localhost` can resolve to `::1` while
+the app binds IPv4, producing a permanently unhealthy healthy app.
+
+`docker/entrypoint.sh` exports `FOO` from `FOO_FILE` for Swarm secrets, then
+`exec node dist/main`. It does not migrate or seed.
+
+---
+
+## Environment
+
+`.env.example` is the complete list. Eleven variables are required to boot and
+the app refuses to start without them:
+
+`NODE_ENV`, `PORT`, `CLIENT_URL`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`,
+`DB_NAME`, `REDIS_HOST`, `REDIS_PORT`, `JWT_SECRET` (min 32 chars).
+
+Everything else is optional, and the service that needs it fails at the point of
+use rather than at boot.
+
+Worth calling out:
+
+- **`DB_SSL`** — `false` for a local container, `true` for managed Postgres.
+  Certificate verification stays on; use `DB_SSL_CA` for a private root.
+- **`TRUST_PROXY_HOPS`** — `0` when exposed directly, `1` behind Caddy. Wrong
+  either way breaks rate limiting. See DEPLOYMENT.md.
+- **`BETTER_AUTH_URL`** — the public origin. Email links are built from it.
+- **`ADMIN_PASSWORD`** — unset it after the first seed.
+
+---
+
+## Troubleshooting
+
+**Migrations "do nothing" after adding an entity** — the datasource globs
+`src/modules/**/*.entity.ts`. A file outside that path is invisible, and
+`migration:generate` reports no changes rather than erroring.
+
+**`migration:generate` keeps emitting the same index rename** — the migration's
+index name does not match what `@Index()` generates. Use TypeORM's name.
+
+**Auth tables missing after adding a plugin** — you skipped `pnpm auth:sql`.
+
+**Container is `unhealthy` but the app responds** — check the probe path. Health
+is at `/health`, deliberately outside the `/api` prefix and unversioned.
+
+**`docker compose config` fails with "required variable ... is missing"** —
+`env_file:` does not feed `${VAR}` interpolation; only `--env-file` does.
+`scripts/deploy.sh` passes it. Running compose by hand, you must too.

@@ -39,11 +39,16 @@ Still open in this area:
 - [ ] Teams and dynamic per-org roles — plugin options exist, disabled
 - [ ] Postgres row-level security. The tenant filter is application-level, so a
       hand-written raw query can still bypass it
-- [ ] Log sink. pino writes structured JSON to stdout; nothing ships it yet.
-      Sentry Logs / Better Stack / CloudWatch — a config choice, not code
+- [x] ~~Zero-downtime unproven~~ — verified on a single-node swarm: 2,998
+      requests across a rolling update, 0 failures, `start-first` confirmed
+- [ ] Log sink. pino writes structured JSON to stdout with rotation; nothing
+      ships it off-box yet. Sentry Logs / Better Stack / Loki — a config choice
 - [ ] Prometheus metrics. `@nestjs/terminus` is wired; no `/metrics` endpoint
 - [ ] `AuditLog` does not extend `BaseEntity`; it redefines id and timestamps
 - [ ] `StorageService.buildPath()` still encodes pet-domain path shapes
+- [ ] Redis has no password. It sits on an `internal: true` network with no
+      published port, so network isolation is the control — but the three
+      `new Redis(...)` sites would all need a `REDIS_PASSWORD` if that changes
 - [ ] Test coverage thresholds are not enforced
 
 ## 6. Toolchain follow-ups
@@ -63,3 +68,33 @@ Deliberately held back from the dependency pass — each is a major:
       the work alone
 - [x] ~~Docker compose Postgres port collision~~ — host binding is now
       `${DB_PORT:-5433}`, with the container internally pinned to 5432
+
+## 7. Deployment (added with the Swarm migration)
+
+Production is a single-node Docker Swarm stack — see
+[DEPLOYMENT.md](./DEPLOYMENT.md). Closed in that pass:
+
+- [x] ~~Prod healthcheck probed a 404~~ — `/health` and `/health/live` are now
+      outside the API prefix and unversioned; the container can actually report
+      healthy, which rolling updates depend on
+- [x] ~~`trust proxy` unset~~ — `TRUST_PROXY_HOPS`; without it every client
+      behind Caddy shared one rate-limit bucket
+- [x] ~~Redis unpersisted~~ — AOF + volume, in both environments
+- [x] ~~Dev Redis on `allkeys-lru`~~ — `noeviction`, which BullMQ requires
+- [x] ~~Postgres and Redis published on all interfaces~~ — only 80/443 now
+- [x] ~~No log rotation~~ — 10m × 3 on every service
+- [x] ~~Migrations raced across replicas~~ — moved to a pre-deploy step
+- [x] ~~Prod built from source and ignored the ghcr image~~ — pulls by tag;
+      CI publishes on `dev`
+- [x] ~~GDPR deletion email had no confirmation link~~
+- [x] ~~`pnpm dev:setup prod` pointed at a nonexistent file~~
+- [x] ~~`develop.watch` watched `package-lock.json` in a pnpm repo~~
+
+Open:
+
+- [ ] Confirm PITR is enabled on the managed Postgres provider. This stack has
+      no backup of its own, by design
+- [ ] Add a free external uptime check. Uptime Kuma runs on the box it watches
+      and cannot report that the box is down
+- [x] ~~Watchtower held the docker socket directly~~ — `tecnativa/docker-socket-proxy`
+      now holds it and exposes read-only container/image endpoints only
