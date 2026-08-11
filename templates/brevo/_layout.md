@@ -22,11 +22,13 @@ empty — it does not error — so keep these in sync with `auth.config.ts` and
 | `verification.html` | `appName`, `name`, `url` |
 | `password-reset.html` | `appName`, `name`, `url` |
 | `invitation.html` | `appName`, `organizationName`, `inviterName`, `inviterEmail`, `role`, `url` |
-| `account-deletion.html` | `appName`, `name` |
+| `account-deletion.html` | `appName`, `name`, `url` |
 | `admin-alert.html` | `appName`, `environment`, `message`, `path`, `timestamp`, `stack` |
 
-`account-deletion.html` has no sender in the codebase yet — the `EmailType`
-exists and nothing calls it. It is included so the set is complete.
+`account-deletion.html` is sent by better-auth's `sendDeleteAccountVerification`
+hook (`src/modules/auth/auth.config.ts`). `params.url` is the confirmation link —
+GDPR erasure is unreachable without it, and a missing placeholder renders empty
+rather than erroring, so the omission is silent.
 
 ## Design notes
 
