@@ -29,6 +29,10 @@ services:
     stdin_open: true
     tty: true
     restart: unless-stopped
+    # entrypoint.dev.sh execs `pnpm start:dev`, making pnpm PID 1 — it does not
+    # forward signals or reap children, so `down` would hit the 10s SIGKILL.
+    # (Production does not need this; its Dockerfile already has dumb-init.)
+    init: true
     depends_on:
       postgres:
         condition: service_healthy
@@ -42,7 +46,7 @@ services:
         - action: rebuild
           path: ../package.json
         - action: rebuild
-          path: ../package-lock.json
+          path: ../pnpm-lock.yaml
 
   postgres:
     image: postgres:16
@@ -78,11 +82,19 @@ services:
     command:
       [
         'redis-server',
+        '--appendonly',
+        'yes',
         '--maxmemory',
         '256mb',
+        # noeviction, NOT allkeys-lru: BullMQ can have a job hash evicted while
+        # its id stays queued, corrupting the queue. Matching production here
+        # means the bug cannot hide in dev.
         '--maxmemory-policy',
-        'allkeys-lru',
+        'noeviction',
       ]
+    volumes:
+      - enterprise_redisdata_dev:/data
 
 volumes:
   enterprise_pgdata_dev:
+  enterprise_redisdata_dev:

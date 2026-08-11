@@ -32,8 +32,13 @@ RUN pnpm build
 # -----------------------------------------------------------------------------
 FROM base AS prod-deps
 
+# --ignore-scripts is required, not an optimisation: the `prepare` lifecycle
+# script runs husky, which is a devDependency and therefore absent from a --prod
+# install, so the install exits non-zero without it. Skipping lifecycle scripts
+# in a production install is the right default anyway — nothing here needs to
+# compile at install time.
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod
+    pnpm install --frozen-lockfile --prod --ignore-scripts
 
 # -----------------------------------------------------------------------------
 # Stage 4: run - minimal production image
@@ -64,6 +69,12 @@ RUN chmod +x /app/entrypoint.sh && \
 USER nestjs
 
 EXPOSE 5500
+
+# Self-describing for anything consuming this image outside our compose/stack
+# files. 127.0.0.1 rather than localhost: on Alpine localhost may resolve to
+# ::1 while the app binds IPv4.
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+  CMD wget -q --spider http://127.0.0.1:5500/health || exit 1
 
 ENTRYPOINT ["dumb-init", "--"]
 CMD ["/app/entrypoint.sh"]
