@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, VERSION_NEUTRAL } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   HealthCheck,
@@ -25,7 +25,7 @@ import { Public } from '@/modules/auth/public.decorator';
  * @Public() — probes and load balancers have no session.
  */
 @Public()
-@Controller('health')
+@Controller({ path: 'health', version: VERSION_NEUTRAL })
 export class HealthController {
   constructor(
     private readonly health: HealthCheckService,

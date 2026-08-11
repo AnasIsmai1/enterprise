@@ -8,6 +8,11 @@ import { AppModule } from '@/app/app.module';
  * Requires Postgres and Redis to be reachable (see docker-compose.dev.yaml) —
  * AppModule opens real connections. These are integration tests, not unit tests.
  *
+ * /health and /health/live are excluded from the global prefix and from
+ * versioning in main.ts, so the paths asserted below are the real production
+ * paths — not, as previously, paths that only existed because
+ * createNestApplication() skips main.ts.
+ *
  * Covers the guard wiring only. The better-auth routes are NOT reachable here:
  * they are mounted on the raw Express instance in main.ts, which
  * Test.createNestApplication() does not run. Exercise those against a booted

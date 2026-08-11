@@ -72,7 +72,11 @@ async function bootstrap() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
-  app.setGlobalPrefix('api');
+  // Health is excluded from the prefix AND from versioning (see
+  // the version: VERSION_NEUTRAL on HealthController) so probes get stable
+  // /health and /health/live. Orchestrators and the container HEALTHCHECK
+  // should not have to track an API version.
+  app.setGlobalPrefix('api', { exclude: ['health', 'health/live'] });
 
   // CORS using CLIENT_URL from env (SEC-04)
   const clientUrl = configService.get<string>('app.clientUrl') ?? '';
