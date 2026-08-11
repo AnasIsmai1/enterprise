@@ -4,6 +4,7 @@ import { Pool } from 'pg';
 import type Redis from 'ioredis';
 import { EmailService } from '@/external/email/email.service';
 import { AuditLogService } from '@/modules/audit/audit.service';
+import { databaseConnection } from '@/shared/config/database.config';
 import { EmailType } from '@/external/email/email.types';
 import { parseTtlSeconds } from '@/shared/utils/ttl.utils';
 
@@ -41,13 +42,7 @@ export async function createAuth(
     .map((s) => s.trim())
     .filter(Boolean);
 
-  const pool = new Pool({
-    host: config.get<string>('database.host'),
-    port: config.get<number>('database.port'),
-    user: config.get<string>('database.user'),
-    password: config.get<string>('database.password'),
-    database: config.get<string>('database.name'),
-  });
+  const pool = new Pool(databaseConnection(config));
 
   const appName = config.get<string>('app.name', 'Enterprise API');
 

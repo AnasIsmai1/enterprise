@@ -7,6 +7,7 @@ import { HealthModule } from './health/health.module';
 
 import configuration from '@/shared/config/configuration';
 import validate from '@/shared/config/env.validation';
+import { databaseConnection } from '@/shared/config/database.config';
 // ResponseInterceptor moved to src/common/interceptors/response.interceptor.ts — wired in main.ts
 import { AppLoggingModule } from '@/shared/logging/logging.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -42,13 +43,16 @@ import { HttpExceptionFilter } from '@/common/filters/http-exception.filter';
         const isProduction =
           configService.get<string>('app.nodeEnv') === 'production';
 
+        const db = databaseConnection(configService);
+
         return {
           type: 'postgres',
-          host: configService.get<string>('database.host'),
-          port: configService.get<number>('database.port'),
-          username: configService.get<string>('database.user'),
-          password: configService.get<string>('database.password'),
-          database: configService.get<string>('database.name'),
+          host: db.host,
+          port: db.port,
+          username: db.user,
+          password: db.password,
+          database: db.database,
+          ssl: db.ssl,
           autoLoadEntities: true,
           migrations: [__dirname + '/../migrations/*{.ts,.js}'],
           migrationsTableName: 'migrations',

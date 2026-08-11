@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { DataSource } from 'typeorm';
+import { databaseConnectionFromEnv } from './database.config';
 
 /**
  * TypeORM owns application tables only. Identity tables (user, session, account,
@@ -7,13 +8,16 @@ import { DataSource } from 'typeorm';
  * created by the same migration chain — see the InitialSchema migration — but
  * are not modelled as entities here.
  */
+const db = databaseConnectionFromEnv();
+
 const typeormDataSource = new DataSource({
   type: 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432', 10),
-  username: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASS || '',
-  database: process.env.DB_NAME || 'enterprise',
+  host: db.host,
+  port: db.port,
+  username: db.user,
+  password: db.password,
+  database: db.database,
+  ssl: db.ssl,
   // A glob, not a hand-maintained list. A list drifts silently, and a missing
   // entity makes `migration:generate` emit an empty diff instead of the table
   // you just added. Mirrors autoLoadEntities in AppModule.

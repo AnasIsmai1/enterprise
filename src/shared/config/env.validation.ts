@@ -1,5 +1,6 @@
 import {
   IsEnum,
+  IsIn,
   IsNumber,
   IsString,
   IsEmail,
@@ -75,6 +76,23 @@ export class AppConfigDto {
 
   @IsString()
   DB_NAME: string;
+
+  // Validated as literal strings rather than booleans: with
+  // enableImplicitConversion a declared boolean turns the string 'false' into
+  // true, which would silently enable TLS verification bypass — or silently
+  // enable TLS against a local plaintext Postgres. Both fail confusingly.
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  DB_SSL?: string;
+
+  /** Inline PEM or a path to one, for providers off the public root chain. */
+  @IsOptional()
+  @IsString()
+  DB_SSL_CA?: string;
+
+  @IsOptional()
+  @IsIn(['true', 'false'])
+  DB_SSL_REJECT_UNAUTHORIZED?: string;
 
   // Redis (2)
   @IsString()

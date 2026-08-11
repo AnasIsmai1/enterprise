@@ -3,6 +3,7 @@ import { Logger } from '@nestjs/common';
 import { Pool } from 'pg';
 import { AppRole } from '@/modules/auth/auth.config';
 import { createStandaloneAuth } from '@/modules/auth/auth.standalone';
+import { databaseConnection } from '@/shared/config/database.config';
 
 const logger = new Logger('Seeder');
 
@@ -28,13 +29,7 @@ async function main() {
 
   const { auth, config, close } = await createStandaloneAuth();
 
-  const pool = new Pool({
-    host: config.get<string>('database.host'),
-    port: config.get<number>('database.port'),
-    user: config.get<string>('database.user'),
-    password: config.get<string>('database.password'),
-    database: config.get<string>('database.name'),
-  });
+  const pool = new Pool(databaseConnection(config));
 
   try {
     const existing = await pool.query(

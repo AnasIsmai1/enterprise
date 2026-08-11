@@ -27,6 +27,11 @@ export default () => ({
     user: process.env.DB_USER,
     password: process.env.DB_PASS,
     name: process.env.DB_NAME,
+    // Managed Postgres requires TLS. Verification stays on unless explicitly
+    // disabled — see buildSsl() in database.config.ts.
+    ssl: process.env.DB_SSL === 'true',
+    sslCa: process.env.DB_SSL_CA,
+    sslRejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
   },
   redis: {
     host: process.env.REDIS_HOST,
