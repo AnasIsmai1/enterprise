@@ -29,9 +29,11 @@ export const setupSwagger = (
     // Cookie auth (for session-based flows)
     .addCookieAuth()
     // API group tags
-    .addTag('auth', 'Authentication — register, login, refresh, logout')
-    .addTag('users', 'User profile management')
-    .addTag('health', 'Application health checks')
+    // Only tags with real controllers. better-auth serves /api/auth/* outside
+    // Nest entirely, so it cannot appear in this document at all.
+    .addTag('account', 'GDPR data export')
+    .addTag('projects', 'Reference organization-scoped resource')
+    .addTag('health', 'Liveness and readiness probes')
     .build();
 
   const document = SwaggerModule.createDocument(app, options);

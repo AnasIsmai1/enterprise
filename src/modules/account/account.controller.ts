@@ -13,7 +13,7 @@ import { AuditLogService } from '@/modules/audit/audit.service';
 /**
  * GDPR Article 15 (access) and Article 20 (portability).
  *
- * Erasure (Article 17) is better-auth's `DELETE /api/auth/delete-user`, which
+ * Erasure (Article 17) is better-auth's `POST /api/auth/delete-user`, which
  * confirms by email before destroying anything.
  */
 @ApiTags('account')
