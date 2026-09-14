@@ -91,7 +91,7 @@ pnpm deploy
 
 ## Verified
 
-The Swarm path was exercised end to end on a single node before this shipped:
+The Swarm path has been exercised end to end on a single node:
 
 - Rolling update `v1 → v4` with a request loop against the ingress port:
   **2,998 successful requests, 0 failures.** Task history confirms `start-first`
@@ -103,16 +103,9 @@ The Swarm path was exercised end to end on a single node before this shipped:
 - `docker service update` waits for the healthcheck before converging, which is
   only true because `/health` actually answers.
 
-Two incompatibilities were found and fixed in `scripts/deploy.sh` during that
-run; both made the *first* deploy fail:
-
-1. `docker compose config` emits ports as quoted strings and `stack deploy`
-   demands integers.
-2. It injects a top-level `name:` that the stack schema rejects.
-
-A third was found in `docker/Dockerfile`: `pnpm install --prod` aborted because
-the `prepare` script runs husky, a devDependency. Every production image build
-would have failed. `--ignore-scripts` fixes it.
+`scripts/deploy.sh` normalises two things `docker stack deploy` rejects in
+`docker compose config` output — ports emitted as quoted strings, and an
+injected top-level `name:`. Do not remove that step.
 
 ---
 
@@ -121,7 +114,7 @@ would have failed. `--ignore-scripts` fixes it.
 ```bash
 pnpm deploy              # migrate, then roll out
 pnpm deploy:no-migrate   # roll out only
-pnpm stack:status        # docker stack services enterprise
+pnpm stack:status        # services in $STACK_NAME (default: enterprise)
 pnpm stack:logs          # follow app logs
 pnpm stack:rollback      # revert app to the previous image
 ```
