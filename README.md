@@ -95,8 +95,7 @@ enterprise/
 │   ├── TENANCY.md              # Org-scoping rules for new resources
 │   ├── DEPLOYMENT.md           # Swarm runbook
 │   ├── MIGRATIONS_AND_DOCKER.md
-│   ├── AUDIT.md                # What was found and fixed
-│   └── BACKLOG.md
+│   └── BACKLOG.md              # What this boilerplate does not do yet
 ├── scripts/
 │   ├── setup.sh                # Initial project setup
 │   ├── module-setup.sh         # Module scaffolding
