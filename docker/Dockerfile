@@ -45,10 +45,6 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 # -----------------------------------------------------------------------------
 FROM node:22-alpine AS run
 
-LABEL org.opencontainers.image.source=https://github.com/EagleAnalytix/enterprise
-LABEL org.opencontainers.image.description="Enterprise API - Production"
-LABEL org.opencontainers.image.licenses=MIT
-
 WORKDIR /app
 
 RUN apk add --no-cache dumb-init
