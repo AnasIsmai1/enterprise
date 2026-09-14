@@ -80,7 +80,7 @@ Fill in `APP_IMAGE`, `ACME_EMAIL`, `API_DOMAIN`, `STATUS_DOMAIN`,
 
 `APP_IMAGE` has no `latest` tag — CI publishes `main`, `dev`, `v*` and SHA tags
 only. Pin an immutable tag for real deploys. The repo name is lowercased by the
-registry: `ghcr.io/eagleanalytix/enterprise`.
+registry, so `Owner/Repo` becomes `ghcr.io/owner/repo`.
 
 ### 6. Deploy
 ```bash

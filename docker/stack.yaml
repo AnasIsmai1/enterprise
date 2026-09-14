@@ -56,7 +56,7 @@ services:
   # The API. Two replicas so updates roll rather than drop traffic.
   # ---------------------------------------------------------------------------
   app:
-    image: ${APP_IMAGE:?APP_IMAGE required, e.g. ghcr.io/eagleanalytix/enterprise:dev}
+    image: ${APP_IMAGE:?APP_IMAGE required, e.g. ghcr.io/<owner>/<repo>:dev}
     logging: *logging
     env_file:
       - path: ../.env

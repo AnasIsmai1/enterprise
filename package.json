@@ -2,17 +2,8 @@
   "name": "enterprise",
   "version": "0.0.1",
   "description": "Enterprise API",
-  "author": "EagleAnalytix",
   "private": true,
   "license": "UNLICENSED",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/EagleAnalytix/enterprise"
-  },
-  "homepage": "https://github.com/EagleAnalytix/enterprise#readme",
-  "bugs": {
-    "url": "https://github.com/EagleAnalytix/enterprise/issues"
-  },
   "engines": {
     "node": ">=24"
   },
@@ -49,10 +40,10 @@
     "brevo:sync": "tsx scripts/brevo-sync-templates.ts",
     "lint:check": "eslint \"{src,test,scripts}/**/*.ts\" --max-warnings 0",
     "deploy": "sh scripts/deploy.sh",
-    "stack:status": "docker stack services enterprise",
-    "stack:logs": "docker service logs -f enterprise_app",
-    "stack:rollback": "docker service rollback enterprise_app",
-    "stack:down": "docker stack rm enterprise",
+    "stack:status": "docker stack services ${STACK_NAME:-enterprise}",
+    "stack:logs": "docker service logs -f ${STACK_NAME:-enterprise}_app",
+    "stack:rollback": "docker service rollback ${STACK_NAME:-enterprise}_app",
+    "stack:down": "docker stack rm ${STACK_NAME:-enterprise}",
     "deploy:no-migrate": "sh scripts/deploy.sh --skip-migrate"
   },
   "dependencies": {
