@@ -154,7 +154,7 @@ pnpm stack:rollback
 
 ### Production image — `docker/Dockerfile`
 
-Four stages on `node:22-alpine`:
+Four stages on `node:24-alpine`:
 
 | Stage | Purpose |
 |---|---|

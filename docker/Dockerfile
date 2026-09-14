@@ -5,7 +5,7 @@
 # -----------------------------------------------------------------------------
 # Stage 1: base - pnpm via corepack, shared by every later stage
 # -----------------------------------------------------------------------------
-FROM node:22-alpine AS base
+FROM node:24-alpine AS base
 
 ENV PNPM_HOME=/pnpm
 ENV PATH=$PNPM_HOME:$PATH
@@ -43,7 +43,7 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
 # -----------------------------------------------------------------------------
 # Stage 4: run - minimal production image
 # -----------------------------------------------------------------------------
-FROM node:22-alpine AS run
+FROM node:24-alpine AS run
 
 WORKDIR /app
 

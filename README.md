@@ -8,7 +8,7 @@ A general-purpose NestJS backend boilerplate: better-auth identity with multi-te
 
 | Category | Technology |
 |----------|------------|
-| Runtime | Node.js 22 (engines: >= 20.12) |
+| Runtime | Node.js 24 (engines: >= 24) |
 | Framework | NestJS 11 |
 | Language | TypeScript 5.9 |
 | Compiler | SWC (build + tests) |
@@ -34,7 +34,7 @@ A general-purpose NestJS backend boilerplate: better-auth identity with multi-te
 
 ### Prerequisites
 
-- Node.js >= 20.12 (22 recommended — containers and CI use 22)
+- Node.js >= 24 (containers and CI use 24 — see `test/app.e2e-spec.ts` for why 22 is too old)
 - Docker & Docker Compose
 - PostgreSQL 16 (or use Docker)
 - Redis 7 (or use Docker)

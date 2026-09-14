@@ -21,6 +21,11 @@ import { AppModule } from '@/app/app.module';
  * Runs with NODE_OPTIONS=--experimental-vm-modules (see the test:e2e script) —
  * AppModule dynamically imports better-auth, which is ESM, and jest's VM cannot
  * do that otherwise.
+ *
+ * Needs Node >= 24: on 22 jest's ESM linker cannot resolve zod's
+ * `./v4/classic/external.js` re-export, so this import fails with "is from a
+ * module not been linked". The app itself runs fine on 22 — jest's VM is the
+ * limitation, not the runtime.
  */
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
